@@ -1,0 +1,20 @@
+cd backend
+uvicorn app.main:app --reload
+
+python -m uvicorn app.main:app --reload #rodar app
+
+
+✅ 1️⃣ Abrir o PostgreSQL (psql)
+
+No terminal (fora do uvicorn):
+
+psql -U postgres
+
+👉 Digite a senha que você definiu
+
+✅ 2️⃣ Conectar no banco correto
+\c conferencia
+
+✔️ Confirmação esperada:
+
+You are now connected to database "conferencia"

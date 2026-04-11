@@ -1,0 +1,387 @@
+1. Visão Geral
+
+O sistema de conferência de recebimento tem como objetivo controlar e validar mercadorias recebidas através da conferência de notas fiscais, volumes logísticos e itens contidos nas caixas.
+
+O sistema é composto por três componentes principais:
+
+Backend (API) responsável pela lógica de negócio.
+
+Painel Web para gestão e monitoramento das conferências.
+
+Aplicativo Android (coletor) utilizado pelos operadores para realizar a conferência física das mercadorias.
+
+2. Arquitetura do Sistema
+2.1 Arquitetura geral
+Painel Web
+     │
+     │ API REST
+     │
+Backend (FastAPI)
+     │
+Banco de Dados PostgreSQL
+     │
+App Coletor Android (Flutter)
+Componentes
+Componente	Tecnologia	Função
+Backend	Python + FastAPI	Lógica do sistema
+Banco de dados	PostgreSQL	Armazenamento
+Painel web	React / Next.js	Gestão
+App coletor	Flutter	Operação logística
+3. Estrutura Logística do Sistema
+
+O sistema trabalha com três níveis principais:
+
+Nota Fiscal
+      ↓
+NP (Número do Pedido Logístico)
+      ↓
+Volumes (caixas)
+      ↓
+Itens dentro do volume
+Observações
+
+Uma NP pode ter várias notas fiscais.
+
+Notas diferentes podem compartilhar a mesma NP.
+
+4. Tipos de Etiquetas
+4.1 Etiqueta Branca
+
+Contém:
+
+Número da NP
+
+Número do volume
+
+Código de barras
+
+Exemplo:
+
+NP: 11235071
+VOL: 0015
+
+Utilizada para identificar a caixa no sistema.
+
+4.2 Etiqueta Amarela
+
+Contém a relação dos produtos dentro da caixa.
+
+Utilizada para identificação física do conteúdo.
+
+5. Tipos de Caixas
+5.1 Caixa Fechada
+
+Caixa padrão enviada pelo fornecedor.
+
+Exemplo:
+
+1 caixa = 50 unidades
+Regras
+
+Ativar modo embalagem
+
+Quantidade automática
+
+Não precisa validar volume
+
+5.2 Caixa Fracionada
+
+Caixa aberta ou com quantidade diferente da embalagem padrão.
+
+Regras
+
+Desativar modo embalagem
+
+Quantidade digitada manualmente
+
+Volume precisa ser validado
+
+6. Modos de Registro de Item
+
+O sistema permite dois tipos de registro.
+
+Registro Bipado
+
+Produto registrado via leitura do código de barras.
+
+tipo_registro = bipado
+Registro Digitado
+
+Quantidade informada manualmente.
+
+tipo_registro = digitado
+7. Divergências de Conferência
+
+O sistema identifica automaticamente divergências entre:
+
+itens da nota fiscal
+
+itens conferidos
+
+Tipos de divergência
+Tipo	Descrição
+Falta	NF possui item que não foi conferido
+Sobra	Quantidade maior que NF
+Item incluído	Produto não existente na NF
+Item não contado	Item da NF não registrado
+8. Irregularidades Logísticas
+
+O sistema permite registrar irregularidades físicas.
+
+Tipos:
+
+falta em volume fracionado
+falta em volume fechado
+sobra em volume fracionado
+volume faltando
+volume de outro estabelecimento
+avaria
+
+Cada irregularidade pode conter:
+
+produto
+
+volume
+
+quantidade
+
+observação
+
+foto
+
+indicação de caixa violada
+
+9. Fluxo Operacional
+Fluxo completo
+Importar NF
+↓
+Criar conferência
+↓
+Registrar volumes
+↓
+Operador bipa volume
+↓
+Registrar itens
+↓
+Registrar irregularidades
+↓
+Validar volumes fracionados
+↓
+Enviar conferência
+↓
+Gerar relatório final
+10. Fluxo do Painel Web
+Dashboard
+
+Exibe indicadores:
+
+conferências abertas
+
+volumes contados
+
+divergências
+
+acurácia
+
+Importação de Nota Fiscal
+
+Permite:
+
+importar XML
+
+importar chave NF-e
+
+importar múltiplas notas
+
+Monitoramento de Conferência
+
+Volumes são classificados em:
+
+CONTADOS
+NÃO CONTADOS
+DUPLICADOS
+NÃO INFORMADOS
+Itens da Conferência
+
+Tabela mostra:
+
+descrição
+
+quantidade NF
+
+contagem
+
+diferença
+
+Cores indicam status.
+
+Relatório Final
+
+Exibe:
+
+Itens validados
+Itens faltando
+Itens sobrando
+Itens incluídos
+Volumes contados
+Volumes faltando
+
+E calcula:
+
+Acurácia logística
+11. Fluxo do App Coletor
+Login
+
+Usuário acessa sistema com:
+
+usuário
+
+senha
+
+Menu Principal
+
+Opções:
+
+Nova conferência
+Listar conferências
+Manutenção de contagem
+Sincronizar dados
+Leitura de Volume
+
+Operador bipa etiqueta branca.
+
+Sistema identifica:
+
+NP
+Volume
+
+Volume passa a ser o volume ativo.
+
+Registro de Item
+
+Produto pode ser:
+
+bipado
+
+digitado
+
+pesquisado
+
+Registro de Irregularidade
+
+Operador registra:
+
+tipo
+
+item
+
+volume
+
+quantidade
+
+foto
+
+observação
+
+Sincronização
+
+Após concluir conferência:
+
+Enviar conferência
+
+Dados são enviados para o servidor.
+
+12. Modelo de Banco de Dados
+Principais tabelas
+estabelecimentos
+usuarios
+dispositivos
+
+conferencias
+conferencia_notas
+notas_fiscais
+itens_nf
+
+volumes
+itens_conferencia
+
+irregularidades
+imagens
+13. Tecnologias Utilizadas
+Backend
+Python
+FastAPI
+SQLAlchemy
+PostgreSQL
+Painel Web
+React
+Next.js
+Axios
+Aplicativo Android
+Flutter
+SQLite
+Mobile Scanner
+14. APIs Principais
+Criar conferência
+POST /conferencias
+Importar NF
+POST /notas/importar
+Registrar volume
+POST /volumes
+Registrar item
+POST /itens
+Registrar irregularidade
+POST /irregularidades
+Sincronização do coletor
+POST /sync
+15. Métrica de Acurácia
+
+A acurácia da conferência é calculada com base nos itens corretos.
+
+Fórmula:
+
+Acurácia = itens corretos / total de itens
+
+Exemplo:
+
+Itens corretos: 19
+Itens totais: 21
+
+Acurácia = 90,48%
+16. Funcionalidades Futuras
+
+Possíveis melhorias do sistema:
+
+dashboard logístico
+
+produtividade por operador
+
+tempo de descarga
+
+divergência por fornecedor
+
+integração com ERP
+
+analytics de recebimento
+
+17. Estrutura do Projeto
+sistema-conferencia
+│
+├── backend
+│
+├── frontend
+│
+├── app-coletor
+│
+└── docs
+18. Objetivo do Sistema
+
+Garantir:
+
+controle de recebimento
+
+rastreabilidade
+
+redução de divergências
+
+maior eficiência logística
