@@ -3,6 +3,8 @@ uvicorn app.main:app --reload
 
 python -m uvicorn app.main:app --reload #rodar app
 
+http://127.0.0.1:8000/docs
+
 
 ✅ 1️⃣ Abrir o PostgreSQL (psql)
 
@@ -18,3 +20,9 @@ psql -U postgres
 ✔️ Confirmação esperada:
 
 You are now connected to database "conferencia"
+
+REGRA DE OURO AGORA
+
+Sempre que entrar no PostgreSQL:
+
+\c conferencia

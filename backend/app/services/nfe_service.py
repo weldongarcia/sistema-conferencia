@@ -1,0 +1,56 @@
+import xml.etree.ElementTree as ET
+from app.models.nota_fiscal import NotaFiscal
+from app.models.item_nf import ItemNF
+
+def importar_xml(db: Session, file, conferencia_id):
+
+    conteudo = file.file.read()
+    root = ET.fromstring(conteudo)
+
+    ns = {"nfe": "http://www.portalfiscal.inf.br/nfe"}
+
+    # 🔑 pegar chave de acesso
+    chave = root.find(".//nfe:infNFe", ns).attrib.get("Id", "").replace("NFe", "")
+
+    # 🔍 validar duplicidade
+    nota_existente = db.query(NotaFiscal).filter_by(
+        chave_acesso=chave,
+        conferencia_id=conferencia_id
+    ).first()
+    if nota_existente:
+        return {"erro": "Nota já importada"}
+
+    # 🧾 criar nota
+    nota = NotaFiscal(
+        chave_acesso=chave,
+        numero="1",  # depois vamos melhorar isso
+        conferencia_id=conferencia_id
+    )
+
+    db.add(nota)
+    db.commit()
+    db.refresh(nota)
+
+    itens_salvos = []
+
+    # 📦 itens
+    for det in root.findall(".//nfe:det", ns):
+        prod = det.find("nfe:prod", ns)
+
+        item = ItemNF(
+            nota_id=nota.id,
+            codigo=prod.find("nfe:cProd", ns).text,
+            descricao=prod.find("nfe:xProd", ns).text,
+            quantidade=prod.find("nfe:qCom", ns).text,
+        )
+
+        db.add(item)
+        itens_salvos.append(item)
+
+    db.commit()
+
+    return {
+        "msg": "Nota importada com sucesso",
+        "nota_id": nota.id,
+        "total_itens": len(itens_salvos)
+    }

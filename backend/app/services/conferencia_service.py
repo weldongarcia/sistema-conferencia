@@ -1,15 +1,43 @@
-from app.models.conferencia import Conferencia
 from sqlalchemy.orm import Session
+from app.models.item_nf import ItemNF
+from app.models.contagem import Contagem
+from collections import defaultdict
 
-def criar_conferencia(db: Session, dados):
-    nova_conferencia = Conferencia(
-        estabelecimento_id=dados.estabelecimento_id,
-        usuario_id=dados.usuario_id,
-        status="aberto"  # regra de negócio
-    )
+def comparar_conferencia(db: Session, conferencia_id: int):
 
-    db.add(nova_conferencia)
-    db.commit()
-    db.refresh(nova_conferencia)
+    # 🔹 Buscar itens do XML
+    itens_nf = db.query(ItemNF).all()
 
-    return nova_conferencia
+    # 🔹 Buscar contagens
+    contagens = db.query(Contagem).filter_by(conferencia_id=conferencia_id).all()
+
+    # 🔹 Agrupar XML
+    mapa_xml = defaultdict(float)
+
+    for item in itens_nf:
+        qtd = float(item.quantidade)
+        mapa_xml[item.codigo] += qtd
+
+    # 🔹 Agrupar contagem
+    mapa_contagem = defaultdict(float)
+
+    for c in contagens:
+        mapa_contagem[c.codigo] += c.quantidade
+
+    # 🔹 Comparar
+    resultado = []
+
+    codigos = set(mapa_xml.keys()) | set(mapa_contagem.keys())
+
+    for codigo in codigos:
+        xml_qtd = mapa_xml.get(codigo, 0)
+        cont_qtd = mapa_contagem.get(codigo, 0)
+
+        resultado.append({
+            'codigo': codigo,
+            'xml': xml_qtd,
+            'contado': cont_qtd,
+            'diferenca': cont_qtd - xml_qtd
+        })
+
+    return resultado
