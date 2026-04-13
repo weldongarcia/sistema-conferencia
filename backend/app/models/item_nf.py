@@ -9,3 +9,5 @@ class ItemNF(Base):
     codigo = Column(String)
     descricao = Column(String)
     quantidade = Column(String)
+    conferencia_id = Column(Integer)
+    

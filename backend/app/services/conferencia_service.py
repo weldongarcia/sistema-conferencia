@@ -6,7 +6,7 @@ from collections import defaultdict
 def comparar_conferencia(db: Session, conferencia_id: int):
 
     # 🔹 Buscar itens do XML
-    itens_nf = db.query(ItemNF).all()
+    itens_nf = db.query(ItemNF).filter_by(conferencia_id=conferencia_id).all()
 
     # 🔹 Buscar contagens
     contagens = db.query(Contagem).filter_by(conferencia_id=conferencia_id).all()
@@ -40,4 +40,17 @@ def comparar_conferencia(db: Session, conferencia_id: int):
             'diferenca': cont_qtd - xml_qtd
         })
 
-    return resultado
+    tem_divergencia = any(item['diferenca'] != 0 for item in resultado)
+
+    total_itens = len(resultado)
+    divergentes = sum(1 for item in resultado if item["diferenca"] != 0)
+
+# ✅ ÚNICO RETURN
+
+    return {
+    "status": "divergente" if divergentes > 0 else "ok",
+    "total_itens": total_itens,
+    "divergentes": divergentes,
+    "itens": resultado
+}
+

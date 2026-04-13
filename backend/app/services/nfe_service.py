@@ -42,6 +42,7 @@ def importar_xml(db: Session, file, conferencia_id):
             codigo=prod.find("nfe:cProd", ns).text,
             descricao=prod.find("nfe:xProd", ns).text,
             quantidade=prod.find("nfe:qCom", ns).text,
+            conferencia_id=conferencia_id,
         )
 
         db.add(item)
