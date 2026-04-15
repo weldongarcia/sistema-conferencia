@@ -26,3 +26,15 @@ REGRA DE OURO AGORA
 Sempre que entrar no PostgreSQL:
 
 \c conferencia
+
+Quando fizer mudanças assim (grandes):
+git add .
+git commit -m "descrição clara da feature"
+git push
+
+
+Limpar banco de dados
+🔥 LIMPE TUDO MESMO
+DELETE FROM itens_nf;
+DELETE FROM notas_fiscais;
+DELETE FROM contagens;

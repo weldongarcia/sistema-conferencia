@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.item_nf import ItemNF
 from app.models.contagem import Contagem
 from collections import defaultdict
+from app.models.divergencia import Divergencia
 
 def comparar_conferencia(db: Session, conferencia_id: int):
 
@@ -38,13 +39,27 @@ def comparar_conferencia(db: Session, conferencia_id: int):
             'xml': xml_qtd,
             'contado': cont_qtd,
             'diferenca': cont_qtd - xml_qtd
+            
         })
+        db.query(Divergencia).filter_by(conferencia_id=conferencia_id).delete()
+        # Salvar divergencia (Apenas se diferente)
+        if cont_qtd - xml_qtd != 0:
+            divergencia = Divergencia(
+                conferencia_id=conferencia_id,
+                codigo=codigo,
+                xml=xml_qtd,
+                contado=cont_qtd,
+                diferenca=cont_qtd - xml_qtd
+            )
+            db.add(divergencia)
+    
 
     tem_divergencia = any(item['diferenca'] != 0 for item in resultado)
 
     total_itens = len(resultado)
     divergentes = sum(1 for item in resultado if item["diferenca"] != 0)
 
+    db.commit()
 # ✅ ÚNICO RETURN
 
     return {
