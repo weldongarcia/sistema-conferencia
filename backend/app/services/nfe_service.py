@@ -1,9 +1,30 @@
 import xml.etree.ElementTree as ET
 from app.models.nota_fiscal import NotaFiscal
 from app.models.item_nf import ItemNF
+from app.models.conferencia import Conferencia
+from fastapi import HTTPException
+from app.models.nota_fiscal import NotaFiscal
 
-def importar_xml(db: Session, file, conferencia_id):
 
+
+def importar_xml(db, file, conferencia_id):
+    conferencia = db.query(Conferencia).filter_by(id=conferencia_id).first()
+    if not conferencia:
+        return {'erro': 'Conferência não encontrada'}
+    
+    if conferencia.status == 'finalizado':
+        return {'erro': 'Conferência finalizada. Não pode importar XML.'}
+    
+    nota_existente = db.query(NotaFiscal).filter_by(
+    conferencia_id=conferencia_id
+).first()
+
+    if nota_existente:
+        raise HTTPException(
+        status_code=400,
+        detail="XML já importado para esta conferência."
+    )
+    
     conteudo = file.file.read()
     root = ET.fromstring(conteudo)
 
@@ -55,3 +76,4 @@ def importar_xml(db: Session, file, conferencia_id):
         "nota_id": nota.id,
         "total_itens": len(itens_salvos)
     }
+

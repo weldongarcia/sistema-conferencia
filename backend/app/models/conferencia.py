@@ -2,6 +2,9 @@ from sqlalchemy import Column, Integer, String, DateTime
 from datetime import datetime
 from app.database.connection import Base
 
+
+status = Column(String, default='aberto')
+
 class Conferencia(Base):
     __tablename__ = "conferencias"
 
