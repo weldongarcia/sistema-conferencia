@@ -5,3 +5,4 @@ class ContagemCreate(BaseModel):
     codigo: str
     quantidade: int
     
+    

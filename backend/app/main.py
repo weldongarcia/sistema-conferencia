@@ -4,13 +4,19 @@ from app.models.contagem import Contagem
 from app.routes import contagens
 from app.routes import conferencia
 from app.models.divergencia import Divergencia
-
+from app.models.contagem_historico import ContagemHistorico
 from app.routes import conferencias, notas, volumes, itens, irregularidades
+from fastapi.security import HTTPBearer
+from app.routes import auth
+
+
+
 
 app = FastAPI(title="Sistema de Conferência")
+security = HTTPBearer()
 
 # cria tabelas
-print("DIVERGENCIA IMPORTADA")
+
 Base.metadata.create_all(bind=engine)
 
 # rotas
@@ -21,6 +27,8 @@ app.include_router(itens.router)
 app.include_router(irregularidades.router)
 app.include_router(contagens.router)
 app.include_router(conferencia.router)
+app.include_router(auth.router)
+
 
 @app.get("/")
 def home():

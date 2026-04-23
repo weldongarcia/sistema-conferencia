@@ -2,9 +2,10 @@ from app.models.contagem import Contagem
 from app.models.conferencia import Conferencia
 from app.models.item_nf import ItemNF
 from fastapi import HTTPException
+from app.models.contagem_historico import ContagemHistorico
 
 
-def criar_contagem(db, dados):
+def criar_contagem(db, dados, usuario):
 
     conferencia = db.query(Conferencia).filter_by(
         id=dados.conferencia_id
@@ -42,12 +43,29 @@ def criar_contagem(db, dados):
     # se existir -> UPDATE
     if contagem_existente:
 
-        contagem_existente.quantidade = dados.quantidade
+    # 🚫 se não houve mudança, não faz nada
+        if contagem_existente.quantidade == dados.quantidade:
+            return contagem_existente
 
-        db.commit()
-        db.refresh(contagem_existente)
+    # 📜 salva histórico
+    historico = ContagemHistorico(
+        conferencia_id=dados.conferencia_id,
+        codigo=dados.codigo,
+        valor_anterior=contagem_existente.quantidade,
+        valor_novo=dados.quantidade,
+        usuario=usuario
+    )
 
-        return contagem_existente
+    db.add(historico)
+
+    # 🔄 atualiza valor
+    contagem_existente.quantidade = dados.quantidade
+
+    db.commit()
+
+    db.refresh(contagem_existente)
+
+    return contagem_existente
 
     # se NÃO existir -> INSERT
     contagem = Contagem(
