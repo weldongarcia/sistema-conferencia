@@ -8,6 +8,7 @@ from app.models.contagem_historico import ContagemHistorico
 from app.routes import conferencias, notas, volumes, itens, irregularidades
 from fastapi.security import HTTPBearer
 from app.routes import auth
+from app.routes import itens
 
 
 
@@ -28,6 +29,8 @@ app.include_router(irregularidades.router)
 app.include_router(contagens.router)
 app.include_router(conferencia.router)
 app.include_router(auth.router)
+
+
 
 
 @app.get("/")

@@ -8,6 +8,6 @@ class Usuario(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True)
-    senha_hash = Column(String)
+    senha = Column(String)
 
-    perfil = Column(String, default="conferente")
+    perfil = Column(String)

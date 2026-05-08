@@ -1,14 +1,15 @@
 cd backend
 uvicorn app.main:app --reload
 
-python -m uvicorn app.main:app --reload #rodar app
+python -m uvicorn app.main:app --reload
+ #rodar app
 
 http://127.0.0.1:8000/docs
 
 
 ✅ 1️⃣ Abrir o PostgreSQL (psql)
 
-No terminal (fora do uvicorn):
+No terminal (fora do uvicorn):c
 
 psql -U postgres
 

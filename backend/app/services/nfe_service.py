@@ -4,6 +4,7 @@ from app.models.item_nf import ItemNF
 from app.models.conferencia import Conferencia
 from fastapi import HTTPException
 from app.models.nota_fiscal import NotaFiscal
+from app.enums.conferencia_enums import StatusConferencia
 
 
 
@@ -12,7 +13,7 @@ def importar_xml(db, file, conferencia_id):
     if not conferencia:
         return {'erro': 'Conferência não encontrada'}
     
-    if conferencia.status == 'finalizado':
+    if conferencia.status == StatusConferencia.FINALIZADA:
         return {'erro': 'Conferência finalizada. Não pode importar XML.'}
     
     nota_existente = db.query(NotaFiscal).filter_by(

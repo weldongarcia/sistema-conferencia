@@ -14,3 +14,5 @@ class ConferenciaResponse(BaseModel):
 
     class Config:
         from_attributes = True  # substitui orm_mode no FastAPI novo
+
+        

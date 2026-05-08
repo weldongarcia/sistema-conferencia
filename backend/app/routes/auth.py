@@ -1,31 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
-from app.database.connection import SessionLocal
+from app.database.connection import get_db
 from app.models.usuario import Usuario
-from app.schemas.auth import LoginRequest
-from app.core.security import verificar_senha, criar_token
+from app.schemas.auth import LoginSchema
+from app.core.security import criar_token
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @router.post("/login")
-def login(dados: LoginRequest, db: Session = Depends(get_db)):
+def login(dados: LoginSchema, db: Session = Depends(get_db)):
 
-    usuario = db.query(Usuario).filter_by(username=dados.username).first()
+    usuario = db.query(Usuario).filter(
+        Usuario.username == dados.username
+    ).first()
 
-    if not usuario:
-        raise HTTPException(400, "Usuário não encontrado")
+    if not usuario or usuario.senha != dados.senha:
+        raise HTTPException(401, "Credenciais inválidas")
 
-    if not verificar_senha(dados.senha, usuario.senha_hash):
-        raise HTTPException(400, "Senha inválida")
+    token = criar_token(usuario.username, usuario.perfil)
 
     return {
-        "access_token": criar_token(usuario.username, usuario.perfil)
+        "access_token": token,
+        "token_type": "bearer"
     }

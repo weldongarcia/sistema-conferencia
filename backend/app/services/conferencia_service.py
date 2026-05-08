@@ -5,6 +5,10 @@ from collections import defaultdict
 from app.models.divergencia import Divergencia
 from app.models.conferencia import Conferencia
 from fastapi import HTTPException
+from app.enums.conferencia_enums import TipoDivergencia
+from app.enums.conferencia_enums import StatusConferencia
+from app.core.status import STATUS_FINALIZADA, STATUS_REABERTA, STATUS_REPROVADA, STATUS_ABERTA, STATUS_APROVADA
+
 
 
 def comparar_conferencia(db: Session, conferencia_id: int):
@@ -40,14 +44,33 @@ def comparar_conferencia(db: Session, conferencia_id: int):
             "diferenca": diferenca
         })
 
-        if diferenca != 0:
-            db.add(Divergencia(
-                conferencia_id=conferencia_id,
-                codigo=codigo,
-                xml=xml_qtd,
-                contado=cont_qtd,
-                diferenca=diferenca
-            ))
+    
+
+    if codigo not in mapa_xml:
+        tipo = TipoDivergencia.PRODUTO_A_MAIS
+        origem = "FORA_NOTA"
+
+    elif codigo not in mapa_contagem:
+        tipo = TipoDivergencia.PRODUTO_NAO_ENCONTRADO
+        origem = "NOTA"
+
+    elif diferenca < 0:
+        tipo = TipoDivergencia.QUANTIDADE_MENOR
+        origem = "NOTA"
+
+    else:
+        tipo = TipoDivergencia.QUANTIDADE_MAIOR
+        origem = "NOTA"
+
+    db.add(Divergencia(
+        conferencia_id=conferencia_id,
+        codigo=codigo,
+        xml=xml_qtd,
+        contado=cont_qtd,
+        diferenca=diferenca,
+        tipo=tipo,
+        origem=origem
+    ))
 
     db.commit()
 
@@ -62,37 +85,6 @@ def comparar_conferencia(db: Session, conferencia_id: int):
     }
 
 
-def criar_contagem(db, dados):
-
-    conferencia = db.query(Conferencia).filter_by(id=dados.conferencia_id).first()
-
-    if not conferencia:
-        raise HTTPException(404, "Conferência não encontrada")
-
-    if conferencia.status == "finalizado":
-        raise HTTPException(400, "Conferência finalizada. Não pode alterar.")
-
-    item_existe = db.query(ItemNF).filter_by(
-        conferencia_id=dados.conferencia_id,
-        codigo=dados.codigo
-    ).first()
-
-    if not item_existe:
-        raise HTTPException(400, "Produto não existe no XML dessa conferência")
-
-    contagem = Contagem(
-        conferencia_id=dados.conferencia_id,
-        codigo=dados.codigo,
-        quantidade=dados.quantidade
-    )
-
-    db.add(contagem)
-    db.commit()
-    db.refresh(contagem)
-
-    return contagem
-
-
 def fechar_conferencia(db: Session, conferencia_id: int):
 
     conferencia = db.query(Conferencia).filter_by(id=conferencia_id).first()
@@ -100,7 +92,7 @@ def fechar_conferencia(db: Session, conferencia_id: int):
     if not conferencia:
         raise HTTPException(404, 'Conferência não encontrada')
     
-    if conferencia.status == 'finalizado':
+    if conferencia.status == STATUS_FINALIZADA:
         return {'msg': 'Conferência já está finalizada'}
     
     # nova regra:
@@ -109,14 +101,40 @@ def fechar_conferencia(db: Session, conferencia_id: int):
         conferencia_id=conferencia_id
     ).count()
 
-    if divergencias > 0:
-        raise HTTPException(
-            400,
-            "Existem divergências. Conferência não pode ser finalizada."
-        )
+    divergencias_sem_justificativa = db.query(Divergencia).filter(
+    Divergencia.conferencia_id == conferencia_id,
+    Divergencia.justificativa_tipo == None
+).count()
 
-    conferencia.status = "finalizado"
+    if divergencias_sem_justificativa > 0:
+      raise HTTPException(
+        400,
+        "Existem divergências sem justificativa."
+    )
+
+    conferencia.status = StatusConferencia.FINALIZADA
 
     db.commit()
 
     return {"msg": "Conferência finalizada com sucesso"}
+
+def reabrir_conferencia(db: Session, conferencia_id: int, usuario_id: int, motivo: str):
+
+    conferencia = db.query(Conferencia).filter_by(id=conferencia_id).first()
+
+    if not conferencia:
+        raise HTTPException(404, "Conferência não encontrada")
+
+    if not motivo:
+        raise HTTPException(400, "Motivo obrigatório")
+
+    if conferencia.status == STATUS_FINALIZADA:
+        raise HTTPException(400, "Só pode reabrir conferência finalizada")
+
+    conferencia.status = StatusConferencia.REABERTA
+    conferencia.quantidade_reaberturas += 1
+
+    db.commit()
+
+    return {"msg": "Conferência reaberta com sucesso"}
+
