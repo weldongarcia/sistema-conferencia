@@ -38,7 +38,6 @@ def criar_contagem(db, dados, usuario):
        item.status = ITEM_OK
      else:
         item.status = ITEM_DIVERGENTE
-
     # UPDATE
     if contagem_existente:
 
@@ -50,27 +49,39 @@ def criar_contagem(db, dados, usuario):
             codigo=dados.codigo,
             valor_anterior=contagem_existente.quantidade,
             valor_novo=dados.quantidade,
-            usuario=usuario
+            versao=conferencia.versao,
+            usuario_id=usuario.id,
         )
 
         db.add(historico)
-
         contagem_existente.quantidade = dados.quantidade
 
         db.commit()
         db.refresh(contagem_existente)
 
         return contagem_existente
-
     # INSERT
     contagem = Contagem(
-        conferencia_id=dados.conferencia_id,
-        codigo=dados.codigo,
-        quantidade=dados.quantidade
-    )
+    conferencia_id=dados.conferencia_id,
+    codigo=dados.codigo,
+    quantidade=dados.quantidade
+)
 
     db.add(contagem)
+
+    historico = ContagemHistorico(
+    conferencia_id=dados.conferencia_id,
+    codigo=dados.codigo,
+    valor_anterior=0,
+    valor_novo=dados.quantidade,
+    versao=conferencia.versao,
+    usuario_id=usuario.id
+)
+
+    db.add(historico)
+
     db.commit()
     db.refresh(contagem)
 
     return contagem
+

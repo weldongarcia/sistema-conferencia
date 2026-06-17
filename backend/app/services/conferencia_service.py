@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from app.enums.conferencia_enums import TipoDivergencia
 from app.enums.conferencia_enums import StatusConferencia
 from app.core.status import STATUS_FINALIZADA, STATUS_REABERTA, STATUS_REPROVADA, STATUS_ABERTA, STATUS_APROVADA
-
+from app.services.conferencia_historico_service import registrar_historico
 
 
 def comparar_conferencia(db: Session, conferencia_id: int):
@@ -85,7 +85,11 @@ def comparar_conferencia(db: Session, conferencia_id: int):
     }
 
 
-def fechar_conferencia(db: Session, conferencia_id: int):
+def fechar_conferencia(
+        db: Session,
+        conferencia_id: int,
+        usuario_id: int
+):
 
     conferencia = db.query(Conferencia).filter_by(id=conferencia_id).first()
 
@@ -113,6 +117,14 @@ def fechar_conferencia(db: Session, conferencia_id: int):
     )
 
     conferencia.status = StatusConferencia.FINALIZADA
+
+    registrar_historico(
+        db=db,
+        conferencia_id=conferencia.id,
+        usuario_id=usuario_id,
+        acao="FINALIZADA",
+        versao=conferencia.versao
+    )
 
     db.commit()
 

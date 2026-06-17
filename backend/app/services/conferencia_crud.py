@@ -16,11 +16,7 @@ def criar_conferencia(db, dados):
     return conf
 
 def finalizar_conferencia(db, conferencia):
-    conferencia.status = "FINALIZADA"
-    conferencia.status = "EM_AUDITORIA"
-    conferencia.status = "VALIDADA"
-    conferencia.status = "REPROVADA"
-
+    conferencia.status = StatusConferencia.FINALIZADA
     db.commit()
-
+    
     

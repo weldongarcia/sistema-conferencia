@@ -9,6 +9,9 @@ from app.routes import conferencias, notas, volumes, itens, irregularidades
 from fastapi.security import HTTPBearer
 from app.routes import auth
 from app.routes import itens
+from app.routes import divergencias
+from app.models.conferencia_historico import ConferenciaHistorico
+
 
 
 
@@ -29,6 +32,7 @@ app.include_router(irregularidades.router)
 app.include_router(contagens.router)
 app.include_router(conferencia.router)
 app.include_router(auth.router)
+app.include_router(divergencias.router)
 
 
 
