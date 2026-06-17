@@ -189,26 +189,33 @@ def timeline_conferencia(
     eventos = []
 
     for item in historico_conferencia:
-        eventos.append({
-            "tipo": "CONFERENCIA",
-            "data": item.data_evento,
-            "usuario_id": item.usuario_id,
-            "acao": item.acao,
-            "versao": item.versao,
-            "motivo": item.motivo
 
-        })
+        descricao = {
+        "FINALIZADA": "Conferência finalizada",
+        "APROVADA": "Conferência aprovada",
+        "REPROVADA": "Conferência reprovada",
+        "REABERTA": "Conferência reaberta"
+    }.get(item.acao, item.acao)
+
+    eventos.append({
+        "data": item.data_evento,
+        "usuario": item.usuario.username,
+        "evento": descricao,
+        "versao": item.versao,
+        "motivo": item.motivo
+    })
     for item in historico_contagens:
         eventos.append({
-            "tipo": "CONTAGEM",
-            "data": item.data_alteracao,
-            "usuario_id": item.usuario_id,
-            "codigo": item.codigo,
-            "valor_anterior": item.valor_anterior,
-            "valor_novo": item.valor_novo,
-            "versao": item.versao
-        })
-
+        "data": item.data_alteracao,
+        "usuario": item.usuario.username,
+        "evento": (
+            f"Produto {item.codigo} "
+            f"alterado de {item.valor_anterior} "
+            f"para {item.valor_novo}"
+        ),
+        "versao": item.versao
+      })
+        
     eventos.sort(
         key=lambda x: x["data"],
         reverse=True
