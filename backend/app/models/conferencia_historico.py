@@ -11,7 +11,7 @@ class ConferenciaHistorico(Base):
     conferencia_id = Column(Integer, nullable=False)
     usuario_id = Column(
         Integer, 
-        ForeignKey("usuario.id"),
+        ForeignKey("usuarios.id"),
         nullable=False
         
     )
