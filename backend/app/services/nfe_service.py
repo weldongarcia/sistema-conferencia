@@ -5,7 +5,7 @@ from app.models.conferencia import Conferencia
 from fastapi import HTTPException
 from app.models.nota_fiscal import NotaFiscal
 from app.enums.conferencia_enums import StatusConferencia
-
+from app.utils.codigo import normalizar_codigo
 
 
 def importar_xml(db, file, conferencia_id):
@@ -59,9 +59,13 @@ def importar_xml(db, file, conferencia_id):
     for det in root.findall(".//nfe:det", ns):
         prod = det.find("nfe:prod", ns)
 
+        codigo_xml = prod.find("nfe:cProd", ns).text
+
+        codigo = normalizar_codigo(codigo_xml)
+
         item = ItemNF(
             nota_id=nota.id,
-            codigo=prod.find("nfe:cProd", ns).text,
+            codigo=codigo,
             descricao=prod.find("nfe:xProd", ns).text,
             quantidade=prod.find("nfe:qCom", ns).text,
             conferencia_id=conferencia_id,

@@ -9,29 +9,43 @@ from app.enums.conferencia_enums import TipoDivergencia
 from app.enums.conferencia_enums import StatusConferencia
 from app.core.status import STATUS_FINALIZADA, STATUS_REABERTA, STATUS_REPROVADA, STATUS_ABERTA, STATUS_APROVADA
 from app.services.conferencia_historico_service import registrar_historico
-
+from app.utils.codigo import normalizar_codigo
 
 def comparar_conferencia(db: Session, conferencia_id: int):
 
-    itens_nf = db.query(ItemNF).filter_by(conferencia_id=conferencia_id).all()
-    contagens = db.query(Contagem).filter_by(conferencia_id=conferencia_id).all()
+    itens_nf = db.query(ItemNF).filter_by(
+        conferencia_id=conferencia_id
+    ).all()
+
+    contagens = db.query(Contagem).filter_by(
+        conferencia_id=conferencia_id
+    ).all()
 
     mapa_xml = defaultdict(float)
+
     for item in itens_nf:
-        mapa_xml[item.codigo] += float(item.quantidade)
+        codigo = normalizar_codigo(item.codigo)
+
+        mapa_xml[codigo] += float(item.quantidade)
 
     mapa_contagem = defaultdict(float)
+
     for c in contagens:
-        mapa_contagem[c.codigo] += c.quantidade
+        codigo = normalizar_codigo(c.codigo)
+
+        mapa_contagem[codigo] += c.quantidade
 
     resultado = []
 
     codigos = set(mapa_xml.keys()) | set(mapa_contagem.keys())
 
-    # limpar divergencias antigas
-    db.query(Divergencia).filter_by(conferencia_id=conferencia_id).delete()
+    # Limpar divergências antigas
+    db.query(Divergencia).filter_by(
+        conferencia_id=conferencia_id
+    ).delete()
 
     for codigo in codigos:
+
         xml_qtd = mapa_xml.get(codigo, 0)
         cont_qtd = mapa_contagem.get(codigo, 0)
 
@@ -44,6 +58,62 @@ def comparar_conferencia(db: Session, conferencia_id: int):
             "diferenca": diferenca
         })
 
+        # Produto que não existe na NF
+        if codigo not in mapa_xml:
+
+            tipo = TipoDivergencia.PRODUTO_A_MAIS
+            origem = "FORA_NOTA"
+
+        # Produto da NF que não foi contado
+        elif codigo not in mapa_contagem:
+
+            tipo = TipoDivergencia.PRODUTO_NAO_ENCONTRADO
+            origem = "NOTA"
+
+        # Quantidade contada menor
+        elif diferenca < 0:
+
+            tipo = TipoDivergencia.QUANTIDADE_MENOR
+            origem = "NOTA"
+
+        # Quantidade contada maior
+        elif diferenca > 0:
+
+            tipo = TipoDivergencia.QUANTIDADE_MAIOR
+            origem = "NOTA"
+
+        # Sem divergência
+        else:
+            continue
+
+        db.add(
+            Divergencia(
+                conferencia_id=conferencia_id,
+                codigo=codigo,
+                xml=xml_qtd,
+                contado=cont_qtd,
+                diferenca=diferenca,
+                tipo=tipo,
+                origem=origem
+            )
+        )
+
+    db.commit()
+
+    total_itens = len(resultado)
+
+    divergentes = sum(
+        1
+        for item in resultado
+        if item["diferenca"] != 0
+    )
+
+    return {
+        "status": "divergente" if divergentes > 0 else "ok",
+        "total_itens": total_itens,
+        "divergentes": divergentes,
+        "itens": resultado
+    }
     
 
     if codigo not in mapa_xml:

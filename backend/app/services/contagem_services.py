@@ -7,7 +7,27 @@ from app.enums.conferencia_enums import StatusItem
 from app.core.status import ITEM_OK, ITEM_DIVERGENTE, ITEM_NAO_CONFERIDO
 
 
+def reduzir_codigo_barras(codigo_barras: str) -> str:
+    codigo_barras = codigo_barras.strip()
+
+    if not codigo_barras.isdigit():
+        raise HTTPException(
+            400,
+            "Código de barras inválido"
+        )
+
+    if len(codigo_barras) != 13:
+        raise HTTPException(
+            400,
+            "O código de barras deve possuir 13 dígitos"
+        )
+
+    return codigo_barras[7:12]
+
+
 def criar_contagem(db, dados, usuario):
+
+    codigo = reduzir_codigo_barras(dados.codigo)
 
     conferencia = db.query(Conferencia).filter_by(
         id=dados.conferencia_id
@@ -21,7 +41,7 @@ def criar_contagem(db, dados, usuario):
 
     item_existe = db.query(ItemNF).filter_by(
         conferencia_id=dados.conferencia_id,
-        codigo=dados.codigo
+        codigo=codigo
     ).first()
 
     if not item_existe:
@@ -29,15 +49,9 @@ def criar_contagem(db, dados, usuario):
 
     contagem_existente = db.query(Contagem).filter_by(
         conferencia_id=dados.conferencia_id,
-        codigo=dados.codigo
+        codigo=codigo
     ).first()
 
-    def atualizar_status_item(item):
-
-     if item.quantidade_contada == item.quantidade_esperada:
-       item.status = ITEM_OK
-     else:
-        item.status = ITEM_DIVERGENTE
     # UPDATE
     if contagem_existente:
 
@@ -46,7 +60,7 @@ def criar_contagem(db, dados, usuario):
 
         historico = ContagemHistorico(
             conferencia_id=dados.conferencia_id,
-            codigo=dados.codigo,
+            codigo=codigo,
             valor_anterior=contagem_existente.quantidade,
             valor_novo=dados.quantidade,
             versao=conferencia.versao,
@@ -54,29 +68,31 @@ def criar_contagem(db, dados, usuario):
         )
 
         db.add(historico)
+
         contagem_existente.quantidade = dados.quantidade
 
         db.commit()
         db.refresh(contagem_existente)
 
         return contagem_existente
+
     # INSERT
     contagem = Contagem(
-    conferencia_id=dados.conferencia_id,
-    codigo=dados.codigo,
-    quantidade=dados.quantidade
-)
+        conferencia_id=dados.conferencia_id,
+        codigo=codigo,
+        quantidade=dados.quantidade
+    )
 
     db.add(contagem)
 
     historico = ContagemHistorico(
-    conferencia_id=dados.conferencia_id,
-    codigo=dados.codigo,
-    valor_anterior=0,
-    valor_novo=dados.quantidade,
-    versao=conferencia.versao,
-    usuario_id=usuario.id
-)
+        conferencia_id=dados.conferencia_id,
+        codigo=codigo,
+        valor_anterior=0,
+        valor_novo=dados.quantidade,
+        versao=conferencia.versao,
+        usuario_id=usuario.id
+    )
 
     db.add(historico)
 
@@ -84,4 +100,3 @@ def criar_contagem(db, dados, usuario):
     db.refresh(contagem)
 
     return contagem
-
