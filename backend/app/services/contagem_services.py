@@ -3,9 +3,8 @@ from app.models.conferencia import Conferencia
 from app.models.item_nf import ItemNF
 from fastapi import HTTPException
 from app.models.contagem_historico import ContagemHistorico
-from app.enums.conferencia_enums import StatusItem
 from app.core.status import ITEM_OK, ITEM_DIVERGENTE, ITEM_NAO_CONFERIDO
-
+from app.utils.codigo import normalizar_codigo
 
 def reduzir_codigo_barras(codigo_barras: str) -> str:
     codigo_barras = codigo_barras.strip()
@@ -27,7 +26,7 @@ def reduzir_codigo_barras(codigo_barras: str) -> str:
 
 def criar_contagem(db, dados, usuario):
 
-    codigo = reduzir_codigo_barras(dados.codigo)
+    codigo = normalizar_codigo(dados.codigo)
 
     conferencia = db.query(Conferencia).filter_by(
         id=dados.conferencia_id

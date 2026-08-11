@@ -1,23 +1,35 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
+
 from app.database.connection import SessionLocal
-from app.services.conferencia_service import comparar_conferencia
+
+from app.services.conferencia_service import (
+    comparar_conferencia,
+    fechar_conferencia,
+    reabrir_conferencia
+)
+
 from app.core.perfis import AUDITOR
 from app.core.security import exigir_perfil
+
+from app.models.conferencia import Conferencia
 from app.models.conferencia_historico import ConferenciaHistorico
 from app.models.contagem_historico import ContagemHistorico
-from app.core.status import (STATUS_APROVADA,
-     STATUS_REPROVADA,
-     STATUS_REABERTA,
-     STATUS_FINALIZADA,
-     STATUS_ABERTA
+
+from app.core.status import (
+    STATUS_APROVADA,
+    STATUS_REPROVADA,
+    STATUS_REABERTA,
+    STATUS_FINALIZADA,
+    STATUS_ABERTA
 )
-from app.models.conferencia import Conferencia
+
 from app.utils.auth import get_current_user
 from app.enums.conferencia_enums import StatusConferencia
-from app.services.conferencia_historico_service import registrar_historico
-from app.models.conferencia_historico import ConferenciaHistorico
 
+from app.services.conferencia_historico_service import (
+    registrar_historico
+)
 
 router = APIRouter(prefix="/conferencia", tags=["Conferencia"])
 
@@ -27,6 +39,20 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+@router.post("/{conferencia_id}/fechar")
+def fechar_conferencia_endpoint(
+    conferencia_id: int,
+    db: Session = Depends(get_db),
+    usuario = Depends(get_current_user)
+):
+
+    return fechar_conferencia(
+        db=db,
+        conferencia_id=conferencia_id,
+        usuario_id=usuario.id
+    )
 
 @router.get("/{conferencia_id}")
 def comparar(conferencia_id: int, db: Session = Depends(get_db)):
@@ -108,7 +134,7 @@ def reprovar_conferencia(
     }
 
 @router.post("/{conferencia_id}/reabrir")
-def reabrir_conferencia(
+def reabrir_conferencia_endpoint(
     conferencia_id: int,
     motivo: str = Body(...),
     db: Session = Depends(get_db),
@@ -117,41 +143,12 @@ def reabrir_conferencia(
 
     exigir_perfil(usuario, [AUDITOR])
 
-    conferencia = db.query(Conferencia).filter_by(
-        id=conferencia_id
-    ).first()
-
-    if not conferencia:
-        raise HTTPException(404, "Conferência não encontrada")
-
-    if conferencia.status not in [
-        StatusConferencia.FINALIZADA,
-        StatusConferencia.REPROVADA
-    ]:
-        raise HTTPException(
-            400,
-            "Status não permite reabertura"
-        )
-
-    conferencia.status = StatusConferencia.REABERTA
-    conferencia.quantidade_reaberturas += 1
-    conferencia.versao += 1
-
-    registrar_historico(
-    db=db,
-    conferencia_id=conferencia.id,
-    usuario_id=usuario.id,
-    acao="REABERTA",
-    versao=conferencia.versao,
-    motivo=motivo
-)
-
-    db.commit()
-
-    return {
-        "msg": "Conferência reaberta",
-        "motivo": motivo
-    }
+    return reabrir_conferencia(
+        db=db,
+        conferencia_id=conferencia_id,
+        usuario_id=usuario.id,
+        motivo=motivo
+    )
 
 @router.get("/{conferencia_id}/historico")
 def historico_conferencia(
@@ -188,34 +185,39 @@ def timeline_conferencia(
 
     eventos = []
 
+    # Eventos da conferência
     for item in historico_conferencia:
 
         descricao = {
-        "FINALIZADA": "Conferência finalizada",
-        "APROVADA": "Conferência aprovada",
-        "REPROVADA": "Conferência reprovada",
-        "REABERTA": "Conferência reaberta"
-    }.get(item.acao, item.acao)
+            "FINALIZADA": "Conferência finalizada",
+            "APROVADA": "Conferência aprovada",
+            "REPROVADA": "Conferência reprovada",
+            "REABERTA": "Conferência reaberta",
+            "DIVERGENCIA_JUSTIFICADA": "Divergência justificada"
+        }.get(item.acao, item.acao)
 
-    eventos.append({
-        "data": item.data_evento,
-        "usuario": item.usuario.username,
-        "evento": descricao,
-        "versao": item.versao,
-        "motivo": item.motivo
-    })
-    for item in historico_contagens:
         eventos.append({
-        "data": item.data_alteracao,
-        "usuario": item.usuario.username,
-        "evento": (
-            f"Produto {item.codigo} "
-            f"alterado de {item.valor_anterior} "
-            f"para {item.valor_novo}"
-        ),
-        "versao": item.versao
-      })
-        
+            "data": item.data_evento,
+            "usuario": item.usuario.username,
+            "evento": descricao,
+            "versao": item.versao,
+            "motivo": item.motivo
+        })
+
+    # Eventos das contagens
+    for item in historico_contagens:
+
+        eventos.append({
+            "data": item.data_alteracao,
+            "usuario": item.usuario.username,
+            "evento": (
+                f"Produto {item.codigo} "
+                f"alterado de {item.valor_anterior} "
+                f"para {item.valor_novo}"
+            ),
+            "versao": item.versao
+        })
+
     eventos.sort(
         key=lambda x: x["data"],
         reverse=True

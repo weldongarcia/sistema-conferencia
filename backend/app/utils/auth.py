@@ -1,37 +1,55 @@
-from fastapi import Request, HTTPException
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
+
 from jose import jwt, JWTError
+
 from app.database.connection import SessionLocal
 from app.models.usuario import Usuario
-from app.core.security import SECRET_KEY, ALGORITHM
+from app.core.security import SECRET_KEY, ALGORITHM, security
 
-def get_current_user(request: Request):
 
-    authorization = request.headers.get("Authorization")
-
-    if not authorization:
-        raise HTTPException(401, "Token não informado")
-
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Formato de token inválido")
-
-    token = authorization.split(" ")[1]
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
         username = payload.get("sub")
+
+        if not username:
+            raise HTTPException(
+                status_code=401,
+                detail="Token inválido"
+            )
+
     except JWTError as e:
-        print("ERRO JWT:", str(e))  # 👈 isso vai revelar o problema se ainda houver
-        raise HTTPException(401, "Token inválido")
+        print("ERRO JWT:", str(e))
+
+        raise HTTPException(
+            status_code=401,
+            detail="Token inválido"
+        )
 
     db = SessionLocal()
 
-    usuario = db.query(Usuario).filter(
-        Usuario.username == username
-    ).first()
+    try:
+        usuario = db.query(Usuario).filter(
+            Usuario.username == username
+        ).first()
 
-    db.close()
+        if not usuario:
+            raise HTTPException(
+                status_code=401,
+                detail="Usuário não encontrado"
+            )
 
-    if not usuario:
-        raise HTTPException(401, "Usuário não encontrado")
+        return usuario
 
-    return usuario
+    finally:
+        db.close()
