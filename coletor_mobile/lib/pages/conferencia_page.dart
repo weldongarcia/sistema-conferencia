@@ -35,7 +35,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      codigoFocusNode.requestFocus();
+      _focarCodigo();
     });
   }
 
@@ -44,7 +44,18 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     codigoController.dispose();
     quantidadeController.dispose();
     codigoFocusNode.dispose();
+
     super.dispose();
+  }
+
+  void _focarCodigo() {
+    if (!mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      FocusScope.of(context).requestFocus(codigoFocusNode);
+    });
   }
 
   Future<void> recarregar() async {
@@ -55,9 +66,15 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     });
 
     await futureConferencia;
+
+    if (!mounted) return;
+
+    _focarCodigo();
   }
 
   Future<void> registrar() async {
+    if (registrando) return;
+
     final codigo = codigoController.text.trim();
 
     final quantidade = int.tryParse(quantidadeController.text.trim());
@@ -65,12 +82,12 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     if (codigo.isEmpty) {
       _mostrarMensagem('Leia ou informe o código de barras.');
 
-      codigoFocusNode.requestFocus();
+      _focarCodigo();
       return;
     }
 
     if (quantidade == null || quantidade <= 0) {
-      _mostrarMensagem('Informe uma quantidade válida.');
+      _mostrarMensagem('Informe uma quantidade válida.', erro: true);
 
       return;
     }
@@ -105,7 +122,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
       if (!mounted) return;
 
-      codigoFocusNode.requestFocus();
+      _focarCodigo();
     } catch (e) {
       if (!mounted) return;
 
@@ -113,7 +130,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
       _mostrarMensagem(mensagem, erro: true);
 
-      codigoFocusNode.requestFocus();
+      _focarCodigo();
     } finally {
       if (mounted) {
         setState(() {
@@ -124,6 +141,8 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
   }
 
   Future<void> finalizarConferencia() async {
+    if (finalizando) return;
+
     setState(() {
       finalizando = true;
     });
@@ -133,9 +152,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conferência finalizada com sucesso.')),
-      );
+      _mostrarMensagem('Conferência finalizada com sucesso.');
 
       setState(() {
         futureConferencia = conferenciaService.buscarConferencia(
@@ -149,9 +166,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
       final mensagem = e.toString().replaceFirst('Exception: ', '');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensagem), backgroundColor: Colors.red),
-      );
+      _mostrarMensagem(mensagem, erro: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -283,6 +298,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                     TextField(
                       controller: quantidadeController,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       enabled: !registrando && !finalizada,
                       decoration: const InputDecoration(
                         labelText: 'Quantidade',
@@ -372,6 +388,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                     ),
                   ),
                 ),
+
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: recarregar,
@@ -534,11 +551,12 @@ class _ItemConferencia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool conferido = contado > 0;
+
     final bool correto = conferido && diferenca == 0;
+
     final bool divergente = conferido && diferenca != 0;
 
     final IconData icone;
-
     final String situacao;
 
     if (correto) {
@@ -585,7 +603,10 @@ class _ItemConferencia extends StatelessWidget {
 
                   Text(
                     situacao,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
