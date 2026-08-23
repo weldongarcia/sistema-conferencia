@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:coletor_mobile/services/conferencia_service.dart';
 import 'package:coletor_mobile/services/contagem_service.dart';
@@ -48,6 +49,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     super.dispose();
   }
 
+  // ==========================================================
+  // FOCO
+  // ==========================================================
+
   void _focarCodigo() {
     if (!mounted) return;
 
@@ -57,6 +62,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
       FocusScope.of(context).requestFocus(codigoFocusNode);
     });
   }
+
+  // ==========================================================
+  // RECARREGAR
+  // ==========================================================
 
   Future<void> recarregar() async {
     setState(() {
@@ -72,19 +81,48 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     _focarCodigo();
   }
 
-  Future<void> registrar() async {
+  // ==========================================================
+  // FEEDBACK
+  // ==========================================================
+
+  void _feedbackSucesso() {
+    SystemSound.play(SystemSoundType.click);
+
+    HapticFeedback.lightImpact();
+  }
+
+  void _feedbackAlerta() {
+    SystemSound.play(SystemSoundType.alert);
+
+    HapticFeedback.heavyImpact();
+  }
+
+  // ==========================================================
+  // REGISTRAR CONTAGEM
+  // ==========================================================
+
+  Future<void> registrar({bool incluirNaConferencia = false}) async {
     if (registrando) return;
 
     final codigo = codigoController.text.trim();
 
     final quantidade = int.tryParse(quantidadeController.text.trim());
 
+    // ----------------------------------------------------------
+    // VALIDAR CÓDIGO
+    // ----------------------------------------------------------
+
     if (codigo.isEmpty) {
-      _mostrarMensagem('Leia ou informe o código de barras.');
+      _mostrarMensagem('Leia ou informe o código de barras.', erro: true);
 
       _focarCodigo();
+
       return;
     }
+
+    // ----------------------------------------------------------
+    // VALIDAR QUANTIDADE
+    // ----------------------------------------------------------
 
     if (quantidade == null || quantidade <= 0) {
       _mostrarMensagem('Informe uma quantidade válida.', erro: true);
@@ -97,20 +135,44 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     });
 
     try {
+      // --------------------------------------------------------
+      // ENVIAR CONTAGEM
+      // --------------------------------------------------------
+
       final resultado = await contagemService.registrarContagem(
         conferenciaId: widget.conferenciaId,
         codigo: codigo,
         quantidade: quantidade,
+        incluirNaConferencia: incluirNaConferencia,
       );
 
       if (!mounted) return;
 
       final codigoRegistrado = resultado['codigo']?.toString() ?? codigo;
 
-      _mostrarMensagem('Contagem registrada: $codigoRegistrado');
+      // --------------------------------------------------------
+      // FEEDBACK DE SUCESSO
+      // --------------------------------------------------------
+
+      _feedbackSucesso();
+
+      _mostrarMensagem(
+        incluirNaConferencia
+            ? 'Produto $codigoRegistrado incluído na conferência.'
+            : 'Contagem registrada: $codigoRegistrado',
+      );
+
+      // --------------------------------------------------------
+      // LIMPAR CAMPOS
+      // --------------------------------------------------------
 
       codigoController.clear();
+
       quantidadeController.text = '1';
+
+      // --------------------------------------------------------
+      // ATUALIZAR CONFERÊNCIA
+      // --------------------------------------------------------
 
       setState(() {
         futureConferencia = conferenciaService.buscarConferencia(
@@ -122,11 +184,37 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
       if (!mounted) return;
 
+      // --------------------------------------------------------
+      // VOLTAR PARA LEITURA
+      // --------------------------------------------------------
+
       _focarCodigo();
     } catch (e) {
       if (!mounted) return;
 
+      // ========================================================
+      // PRODUTO NÃO ENCONTRADO NA NF
+      // ========================================================
+
+      if (e is ProdutoNaoEncontradoException) {
+        _feedbackAlerta();
+
+        setState(() {
+          registrando = false;
+        });
+
+        await _perguntarIncluirNaConferencia(e.codigo);
+
+        return;
+      }
+
+      // ========================================================
+      // OUTROS ERROS
+      // ========================================================
+
       final mensagem = e.toString().replaceFirst('Exception: ', '');
+
+      _feedbackAlerta();
 
       _mostrarMensagem(mensagem, erro: true);
 
@@ -139,6 +227,89 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
       }
     }
   }
+
+  // ==========================================================
+  // PERGUNTAR INCLUSÃO
+  // ==========================================================
+
+  Future<void> _perguntarIncluirNaConferencia(String codigo) async {
+    if (!mounted) return;
+
+    final incluir = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded),
+              SizedBox(width: 8),
+              Expanded(child: Text('Produto não encontrado')),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Este produto não está presente na nota fiscal.'),
+              const SizedBox(height: 16),
+              Text(
+                'Código: $codigo',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Deseja incluir este produto na conferência?'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text('CANCELAR'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('INCLUIR NA CONFERÊNCIA'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    // ----------------------------------------------------------
+    // CANCELAR
+    // ----------------------------------------------------------
+
+    if (incluir != true) {
+      codigoController.clear();
+
+      quantidadeController.text = '1';
+
+      _focarCodigo();
+
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // CONFIRMAR
+    // ----------------------------------------------------------
+
+    codigoController.text = codigo;
+
+    await registrar(incluirNaConferencia: true);
+  }
+
+  // ==========================================================
+  // FINALIZAR CONFERÊNCIA
+  // ==========================================================
 
   Future<void> finalizarConferencia() async {
     if (finalizando) return;
@@ -166,6 +337,8 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
       final mensagem = e.toString().replaceFirst('Exception: ', '');
 
+      _feedbackAlerta();
+
       _mostrarMensagem(mensagem, erro: true);
     } finally {
       if (mounted) {
@@ -175,6 +348,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
       }
     }
   }
+
+  // ==========================================================
+  // MENSAGEM
+  // ==========================================================
 
   void _mostrarMensagem(String mensagem, {bool erro = false}) {
     ScaffoldMessenger.of(context)
@@ -188,6 +365,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
       );
   }
 
+  // ==========================================================
+  // CONVERTER NÚMERO
+  // ==========================================================
+
   int _numero(dynamic valor) {
     if (valor is num) {
       return valor.toInt();
@@ -196,6 +377,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     return num.tryParse(valor?.toString() ?? '')?.toInt() ?? 0;
   }
 
+  // ==========================================================
+  // BUILD
+  // ==========================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -203,9 +388,17 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: futureConferencia,
         builder: (context, snapshot) {
+          // --------------------------------------------------
+          // CARREGANDO
+          // --------------------------------------------------
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          // --------------------------------------------------
+          // ERRO
+          // --------------------------------------------------
 
           if (snapshot.hasError) {
             return Center(
@@ -231,6 +424,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
               ),
             );
           }
+
+          // --------------------------------------------------
+          // DADOS
+          // --------------------------------------------------
 
           final dados = snapshot.data;
 
@@ -259,6 +456,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
           final percentual = total > 0 ? conferidos / total : 0.0;
 
+          // --------------------------------------------------
+          // TELA
+          // --------------------------------------------------
+
           return Column(
             children: [
               _CabecalhoResumo(
@@ -271,6 +472,9 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
               const Divider(height: 1),
 
+              // =================================================
+              // CAMPOS DE LEITURA
+              // =================================================
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -337,6 +541,9 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
               const Divider(height: 1),
 
+              // =================================================
+              // FINALIZAR
+              // =================================================
               if (!finalizada &&
                   conferidos == total &&
                   total > 0 &&
@@ -365,6 +572,9 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                   ),
                 ),
 
+              // =================================================
+              // FINALIZADA
+              // =================================================
               if (finalizada)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -389,6 +599,9 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                   ),
                 ),
 
+              // =================================================
+              // LISTA
+              // =================================================
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: recarregar,
@@ -403,6 +616,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                         esperado: _numero(item['xml']),
                         contado: _numero(item['contado']),
                         diferenca: _numero(item['diferenca']),
+                        tipoDivergencia: item['tipo_divergencia']?.toString(),
                       );
                     },
                   ),
@@ -415,6 +629,10 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     );
   }
 }
+
+// ============================================================
+// CABEÇALHO
+// ============================================================
 
 class _CabecalhoResumo extends StatelessWidget {
   final int total;
@@ -500,6 +718,10 @@ class _CabecalhoResumo extends StatelessWidget {
   }
 }
 
+// ============================================================
+// RESUMO
+// ============================================================
+
 class _ResumoItem extends StatelessWidget {
   final String titulo;
   final String valor;
@@ -535,38 +757,54 @@ class _ResumoItem extends StatelessWidget {
   }
 }
 
+// ============================================================
+// ITEM DA CONFERÊNCIA
+// ============================================================
+
 class _ItemConferencia extends StatelessWidget {
   final String codigo;
   final int esperado;
   final int contado;
   final int diferenca;
+  final String? tipoDivergencia;
 
   const _ItemConferencia({
     required this.codigo,
     required this.esperado,
     required this.contado,
     required this.diferenca,
+    required this.tipoDivergencia,
   });
 
   @override
   Widget build(BuildContext context) {
     final bool conferido = contado > 0;
 
-    final bool correto = conferido && diferenca == 0;
+    final bool incluidoNaConferencia = tipoDivergencia == 'PRODUTO_A_MAIS';
 
-    final bool divergente = conferido && diferenca != 0;
+    final bool correto = conferido && diferenca == 0 && !incluidoNaConferencia;
+
+    final bool divergente =
+        conferido && diferenca != 0 && !incluidoNaConferencia;
 
     final IconData icone;
     final String situacao;
 
-    if (correto) {
+    if (incluidoNaConferencia) {
+      icone = Icons.add_circle_outline;
+
+      situacao = 'INCLUÍDO NA CONFERÊNCIA';
+    } else if (correto) {
       icone = Icons.check_circle;
+
       situacao = 'CONFERIDO';
     } else if (divergente) {
       icone = Icons.warning_amber;
+
       situacao = 'DIVERGÊNCIA';
     } else {
       icone = Icons.radio_button_unchecked;
+
       situacao = 'NÃO CONFERIDO';
     }
 

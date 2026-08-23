@@ -39,3 +39,7 @@ Limpar banco de dados
 DELETE FROM itens_nf;
 DELETE FROM notas_fiscais;
 DELETE FROM contagens;
+
+
+cd C:\projetos\sistema-conferencia\coletor_mobile
+flutter run

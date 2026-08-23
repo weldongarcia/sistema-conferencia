@@ -1,0 +1,112 @@
+ app-coletor/lib/database/sqlite_service.dart       |   0
+ app-coletor/lib/main.dart                          |   0
+ app-coletor/lib/services/api_service.dart          |   0
+ app-coletor/lib/services/sync_service.dart         |   0
+ app-coletor/screens/irregularidade.dart            |   0
+ app-coletor/screens/leitura_volume.dart            |   0
+ app-coletor/screens/login.dart                     |   0
+ app-coletor/screens/menu.dart                      |   0
+ app-coletor/screens/registro_item.dart             |   0
+ coletor_mobile/.gitignore                          |  45 [32m++[m
+ coletor_mobile/.metadata                           |  45 [32m++[m
+ coletor_mobile/README.md                           |  17 [32m+[m
+ coletor_mobile/analysis_options.yaml               |  28 [32m+[m
+ coletor_mobile/android/.gitignore                  |  14 [32m+[m
+ coletor_mobile/android/app/build.gradle.kts        |  45 [32m++[m
+ .../android/app/src/debug/AndroidManifest.xml      |   7 [32m+[m
+ .../android/app/src/main/AndroidManifest.xml       |  45 [32m++[m
+ .../com/example/coletor_mobile/MainActivity.kt     |   5 [32m+[m
+ .../main/res/drawable-v21/launch_background.xml    |  12 [32m+[m
+ .../src/main/res/drawable/launch_background.xml    |  12 [32m+[m
+ .../app/src/main/res/mipmap-hdpi/ic_launcher.png   | Bin [31m0[m -> [32m544[m bytes
+ .../app/src/main/res/mipmap-mdpi/ic_launcher.png   | Bin [31m0[m -> [32m442[m bytes
+ .../app/src/main/res/mipmap-xhdpi/ic_launcher.png  | Bin [31m0[m -> [32m721[m bytes
+ .../app/src/main/res/mipmap-xxhdpi/ic_launcher.png | Bin [31m0[m -> [32m1031[m bytes
+ .../src/main/res/mipmap-xxxhdpi/ic_launcher.png    | Bin [31m0[m -> [32m1443[m bytes
+ .../app/src/main/res/values-night/styles.xml       |  18 [32m+[m
+ .../android/app/src/main/res/values/styles.xml     |  18 [32m+[m
+ .../android/app/src/profile/AndroidManifest.xml    |   7 [32m+[m
+ coletor_mobile/android/build.gradle.kts            |  24 [32m+[m
+ coletor_mobile/android/gradle.properties           |   6 [32m+[m
+ .../gradle/wrapper/gradle-wrapper.properties       |   5 [32m+[m
+ coletor_mobile/android/settings.gradle.kts         |  26 [32m+[m
+ coletor_mobile/ios/.gitignore                      |  34 [32m+[m
+ coletor_mobile/ios/Flutter/AppFrameworkInfo.plist  |  24 [32m+[m
+ coletor_mobile/ios/Flutter/Debug.xcconfig          |   1 [32m+[m
+ coletor_mobile/ios/Flutter/Release.xcconfig        |   1 [32m+[m
+ .../ios/Runner.xcodeproj/project.pbxproj           | 644 [32m++++++++++++++++++[m
+ .../project.xcworkspace/contents.xcworkspacedata   |   7 [32m+[m
+ .../xcshareddata/IDEWorkspaceChecks.plist          |   8 [32m+[m
+ .../xcshareddata/WorkspaceSettings.xcsettings      |   8 [32m+[m
+ .../xcshareddata/xcschemes/Runner.xcscheme         | 119 [32m++++[m
+ .../Runner.xcworkspace/contents.xcworkspacedata    |   7 [32m+[m
+ .../xcshareddata/IDEWorkspaceChecks.plist          |   8 [32m+[m
+ .../xcshareddata/WorkspaceSettings.xcsettings      |   8 [32m+[m
+ coletor_mobile/ios/Runner/AppDelegate.swift        |  16 [32m+[m
+ .../AppIcon.appiconset/Contents.json               | 122 [32m++++[m
+ .../AppIcon.appiconset/Icon-App-1024x1024@1x.png   | Bin [31m0[m -> [32m10932[m bytes
+ .../AppIcon.appiconset/Icon-App-20x20@1x.png       | Bin [31m0[m -> [32m295[m bytes
+ .../AppIcon.appiconset/Icon-App-20x20@2x.png       | Bin [31m0[m -> [32m406[m bytes
+ .../AppIcon.appiconset/Icon-App-20x20@3x.png       | Bin [31m0[m -> [32m450[m bytes
+ .../AppIcon.appiconset/Icon-App-29x29@1x.png       | Bin [31m0[m -> [32m282[m bytes
+ .../AppIcon.appiconset/Icon-App-29x29@2x.png       | Bin [31m0[m -> [32m462[m bytes
+ .../AppIcon.appiconset/Icon-App-29x29@3x.png       | Bin [31m0[m -> [32m704[m bytes
+ .../AppIcon.appiconset/Icon-App-40x40@1x.png       | Bin [31m0[m -> [32m406[m bytes
+ .../AppIcon.appiconset/Icon-App-40x40@2x.png       | Bin [31m0[m -> [32m586[m bytes
+ .../AppIcon.appiconset/Icon-App-40x40@3x.png       | Bin [31m0[m -> [32m862[m bytes
+ .../AppIcon.appiconset/Icon-App-60x60@2x.png       | Bin [31m0[m -> [32m862[m bytes
+ .../AppIcon.appiconset/Icon-App-60x60@3x.png       | Bin [31m0[m -> [32m1674[m bytes
+ .../AppIcon.appiconset/Icon-App-76x76@1x.png       | Bin [31m0[m -> [32m762[m bytes
+ .../AppIcon.appiconset/Icon-App-76x76@2x.png       | Bin [31m0[m -> [32m1226[m bytes
+ .../AppIcon.appiconset/Icon-App-83.5x83.5@2x.png   | Bin [31m0[m -> [32m1418[m bytes
+ .../LaunchImage.imageset/Contents.json             |  23 [32m+[m
+ .../LaunchImage.imageset/LaunchImage.png           | Bin [31m0[m -> [32m68[m bytes
+ .../LaunchImage.imageset/LaunchImage@2x.png        | Bin [31m0[m -> [32m68[m bytes
+ .../LaunchImage.imageset/LaunchImage@3x.png        | Bin [31m0[m -> [32m68[m bytes
+ .../Assets.xcassets/LaunchImage.imageset/README.md |   5 [32m+[m
+ .../ios/Runner/Base.lproj/LaunchScreen.storyboard  |  37 [32m++[m
+ .../ios/Runner/Base.lproj/Main.storyboard          |  26 [32m+[m
+ coletor_mobile/ios/Runner/Info.plist               |  70 [32m++[m
+ coletor_mobile/ios/Runner/Runner-Bridging-Header.h |   1 [32m+[m
+ coletor_mobile/ios/Runner/SceneDelegate.swift      |   6 [32m+[m
+ coletor_mobile/ios/RunnerTests/RunnerTests.swift   |  12 [32m+[m
+ coletor_mobile/lib/main.dart                       |  18 [32m+[m
+ .../lib/models/comparacao_conferencia.dart         |  47 [32m++[m
+ coletor_mobile/lib/models/conferencia.dart         |  25 [32m+[m
+ coletor_mobile/lib/models/conferencia_resumo.dart  |  86 [32m+++[m
+ coletor_mobile/lib/models/login_response.dart      |  13 [32m+[m
+ .../lib/pages/conferencia_list_page.dart           |  92 [32m+++[m
+ coletor_mobile/lib/pages/conferencia_page.dart     | 603 [32m+++++++++++++++++[m
+ .../lib/pages/conferencia_resumo_page.dart         | 270 [32m++++++++[m
+ coletor_mobile/lib/screens/login_screen.dart       | 103 [32m+++[m
+ coletor_mobile/lib/services/api_service.dart       |  63 [32m++[m
+ coletor_mobile/lib/services/auth_service.dart      |  27 [32m+[m
+ .../lib/services/conferencia_service.dart          |  84 [32m+++[m
+ coletor_mobile/lib/services/contagem_service.dart  |  47 [32m++[m
+ coletor_mobile/linux/.gitignore                    |   1 [32m+[m
+ coletor_mobile/linux/CMakeLists.txt                | 128 [32m++++[m
+ coletor_mobile/linux/flutter/CMakeLists.txt        |  88 [32m+++[m
+ .../linux/flutter/generated_plugin_registrant.cc   |  11 [32m+[m
+ .../linux/flutter/generated_plugin_registrant.h    |  15 [32m+[m
+ .../linux/flutter/generated_plugins.cmake          |  23 [32m+[m
+ coletor_mobile/linux/runner/CMakeLists.txt         |  26 [32m+[m
+ coletor_mobile/linux/runner/main.cc                |   6 [32m+[m
+ coletor_mobile/linux/runner/my_application.cc      | 148 [32m+++++[m
+ coletor_mobile/linux/runner/my_application.h       |  21 [32m+[m
+ coletor_mobile/macos/.gitignore                    |   7 [32m+[m
+ .../macos/Flutter/Flutter-Debug.xcconfig           |   1 [32m+[m
+ .../macos/Flutter/Flutter-Release.xcconfig         |   1 [32m+[m
+ .../macos/Flutter/GeneratedPluginRegistrant.swift  |  10 [32m+[m
+ .../macos/Runner.xcodeproj/project.pbxproj         | 729 [32m+++++++++++++++++++++[m
+ .../xcshareddata/IDEWorkspaceChecks.plist          |   8 [32m+[m
+ .../xcshareddata/xcschemes/Runner.xcscheme         | 117 [32m++++[m
+ .../Runner.xcworkspace/contents.xcworkspacedata    |   7 [32m+[m
+ .../xcshareddata/IDEWorkspaceChecks.plist          |   8 [32m+[m
+ coletor_mobile/macos/Runner/AppDelegate.swift      |  13 [32m+[m
+ .../AppIcon.appiconset/Contents.json               |  68 [32m++[m
+ .../AppIcon.appiconset/app_icon_1024.png           | Bin [31m0[m -> [32m102994[m bytes
+ .../AppIcon.appiconset/app_icon_128.png            | Bin [31m0[m -> [32m5680[m bytes
+ .../AppIcon.appiconset/app_icon_16.png             | Bin [31m0[m -> [32m520[m bytes
+ .../AppIcon.appiconset/app_icon_256.png            | Bin [31m0[m -> [32m14142[m bytes
+ .../AppIcon.appiconset/app_icon_32.png             | Bin [31m0[m -> [32m1066[m bytes
+ .../AppIcon.appiconset/app_icon_512.pn
