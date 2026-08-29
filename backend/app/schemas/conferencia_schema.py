@@ -1,9 +1,10 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class ConferenciaCreate(BaseModel):
-    estabelecimento_id: int
-    usuario_id: int
+    pass
+
 
 class ConferenciaResponse(BaseModel):
     id: int
@@ -13,6 +14,4 @@ class ConferenciaResponse(BaseModel):
     data_inicio: datetime
 
     class Config:
-        from_attributes = True  # substitui orm_mode no FastAPI novo
-
-        
+        from_attributes = True

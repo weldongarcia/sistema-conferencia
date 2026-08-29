@@ -4,6 +4,12 @@ uvicorn app.main:app --reload
 python -m uvicorn app.main:app --reload
  #rodar app
 
+
+ rodar painel web
+ npm run dev
+
+ uvicorn app.main:app --host 0.0.0.0 --port 8000
+
 http://127.0.0.1:8000/docs
 
 
@@ -43,3 +49,20 @@ DELETE FROM contagens;
 
 cd C:\projetos\sistema-conferencia\coletor_mobile
 flutter run
+
+
+
+
+Primeiro entre no projeto:
+
+cd C:\projetos\sistema-conferencia\coletor_mobile
+
+Depois execute o comando.
+
+Antes, recomendo conferir onde o IP aparece
+
+Você pode fazer:
+
+Get-ChildItem -Path . -Recurse -File | Where-Object {
+    $_.FullName -notmatch '\\build\\|\\.dart_tool\\|\\.git\\'
+} | Select-String "192.168.3.41"

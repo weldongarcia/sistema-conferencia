@@ -67,6 +67,29 @@ def criar_contagem(
         )
 
     # ======================================================
+    # ISOLAMENTO POR ESTABELECIMENTO
+    # ======================================================
+
+    if usuario.perfil == "CONFERENTE":
+
+        if usuario.estabelecimento_id is None:
+
+            raise HTTPException(
+                403,
+                "Usuário não está vinculado a um estabelecimento."
+            )
+
+        if (
+            conferencia.estabelecimento_id
+            != usuario.estabelecimento_id
+        ):
+
+            raise HTTPException(
+                403,
+                "Você não possui acesso a esta conferência."
+            )
+
+    # ======================================================
     # VERIFICAR STATUS
     # ======================================================
 

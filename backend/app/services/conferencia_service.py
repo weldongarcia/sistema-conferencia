@@ -26,8 +26,9 @@ from app.utils.codigo import normalizar_codigo
 # ==========================================================
 
 def comparar_conferencia(
-    db: Session,
-    conferencia_id: int
+    db,
+    conferencia_id,
+    usuario
 ):
 
     # ==========================================
@@ -47,6 +48,27 @@ def comparar_conferencia(
         )
 
     versao_atual = conferencia.versao
+
+    # ======================================================
+    # ISOLAMENTO POR ESTABELECIMENTO
+    # ======================================================
+
+    if usuario.perfil == "CONFERENTE":
+
+        if usuario.estabelecimento_id is None:
+            raise HTTPException(
+                403,
+                "Usuário não está vinculado a um estabelecimento."
+            )
+
+        if (
+            conferencia.estabelecimento_id
+            != usuario.estabelecimento_id
+        ):
+            raise HTTPException(
+                403,
+                "Você não possui acesso a esta conferência."
+            )
 
     # ==========================================
     # ITENS DA NF
@@ -73,6 +95,7 @@ def comparar_conferencia(
     # ==========================================
 
     mapa_xml = defaultdict(float)
+    mapa_descricao = {}
 
     for item in itens_nf:
 
@@ -83,6 +106,9 @@ def comparar_conferencia(
         mapa_xml[codigo] += float(
             item.quantidade
         )
+
+        if codigo not in mapa_descricao:
+            mapa_descricao[codigo] = item.descricao
 
     # ==========================================
     # MAPA CONTAGEM
@@ -208,6 +234,7 @@ def comparar_conferencia(
 
             resultado.append({
                 "codigo": codigo,
+                "descricao": mapa_descricao.get(codigo),
                 "xml": xml_qtd,
                 "contado": cont_qtd,
                 "diferenca": diferenca,
@@ -250,7 +277,6 @@ def comparar_conferencia(
                 divergencia
             )
 
-            # Garante que o ID seja gerado
             db.flush()
 
         # ======================================
@@ -272,9 +298,6 @@ def comparar_conferencia(
             divergencia.diferenca = diferenca
             divergencia.tipo = tipo
             divergencia.origem = origem
-
-            # Se a divergência mudou,
-            # a justificativa anterior deixa de valer.
 
             if houve_alteracao:
 
@@ -307,6 +330,7 @@ def comparar_conferencia(
 
         resultado.append({
             "codigo": codigo,
+            "descricao": mapa_descricao.get(codigo),
             "xml": xml_qtd,
             "contado": cont_qtd,
             "diferenca": diferenca,
@@ -477,20 +501,20 @@ def reabrir_conferencia(
             "Conferência não encontrada"
         )
 
-    # ==========================================
+    # ======================================================
     # MOTIVO OBRIGATÓRIO
-    # ==========================================
+    # ======================================================
 
     if not motivo or not motivo.strip():
 
         raise HTTPException(
             400,
-            "Motivo obrigatório"
+            "O motivo da reabertura é obrigatório."
         )
 
-    # ==========================================
+    # ======================================================
     # STATUS QUE PERMITEM REABERTURA
-    # ==========================================
+    # ======================================================
 
     if conferencia.status not in [
         StatusConferencia.FINALIZADA,
@@ -499,24 +523,35 @@ def reabrir_conferencia(
 
         raise HTTPException(
             400,
-            "Status não permite reabertura"
+            (
+                "Somente conferências finalizadas "
+                "ou reprovadas podem ser reabertas."
+            )
         )
 
-    # ==========================================
+    # ======================================================
     # NOVA VERSÃO
-    # ==========================================
+    # ======================================================
+
+    conferencia.versao += 1
+
+    # ======================================================
+    # CONTADOR DE REABERTURAS
+    # ======================================================
+
+    conferencia.quantidade_reaberturas += 1
+
+    # ======================================================
+    # ALTERAR STATUS
+    # ======================================================
 
     conferencia.status = (
         StatusConferencia.REABERTA
     )
 
-    conferencia.quantidade_reaberturas += 1
-
-    conferencia.versao += 1
-
-    # ==========================================
+    # ======================================================
     # REGISTRAR HISTÓRICO
-    # ==========================================
+    # ======================================================
 
     registrar_historico(
         db=db,
@@ -524,19 +559,119 @@ def reabrir_conferencia(
         usuario_id=usuario_id,
         acao="REABERTA",
         versao=conferencia.versao,
-        motivo=motivo
+        motivo=motivo.strip()
     )
 
+    # ======================================================
+    # SALVAR
+    # ======================================================
+
     db.commit()
+
+    db.refresh(
+        conferencia
+    )
 
     return {
         "msg": "Conferência reaberta com sucesso",
 
-        "motivo": motivo,
+        "conferencia_id": conferencia.id,
+
+        "status": conferencia.status.value,
 
         "versao": conferencia.versao,
 
         "quantidade_reaberturas": (
             conferencia.quantidade_reaberturas
         )
+    }
+
+
+# ==========================================================
+# APROVAR CONFERÊNCIA
+# ==========================================================
+
+def aprovar_conferencia(
+    db: Session,
+    conferencia_id: int,
+    usuario_id: int
+):
+
+    conferencia = db.query(
+        Conferencia
+    ).filter_by(
+        id=conferencia_id
+    ).first()
+
+    if not conferencia:
+
+        raise HTTPException(
+            404,
+            "Conferência não encontrada"
+        )
+
+    # ==========================================
+    # STATUS OBRIGATÓRIO
+    # ==========================================
+
+    if conferencia.status != StatusConferencia.FINALIZADA:
+
+        raise HTTPException(
+            400,
+            "Somente conferências finalizadas podem ser aprovadas."
+        )
+
+    # ==========================================
+    # DIVERGÊNCIAS DA VERSÃO ATUAL
+    # ==========================================
+
+    divergencias_sem_justificativa = db.query(
+        Divergencia
+    ).filter(
+        Divergencia.conferencia_id == conferencia_id,
+        Divergencia.versao == conferencia.versao,
+        Divergencia.justificativa_tipo.is_(None)
+    ).count()
+
+    # ==========================================
+    # BLOQUEAR APROVAÇÃO
+    # ==========================================
+
+    if divergencias_sem_justificativa > 0:
+
+        raise HTTPException(
+            400,
+            (
+                "Não é possível aprovar a conferência. "
+                f"Existem {divergencias_sem_justificativa} "
+                "divergência(s) sem justificativa."
+            )
+        )
+
+    # ==========================================
+    # APROVAR
+    # ==========================================
+
+    conferencia.status = (
+        StatusConferencia.APROVADA
+    )
+
+    # ==========================================
+    # HISTÓRICO
+    # ==========================================
+
+    registrar_historico(
+        db=db,
+        conferencia_id=conferencia.id,
+        usuario_id=usuario_id,
+        acao="APROVADA",
+        versao=conferencia.versao
+    )
+
+    db.commit()
+
+    return {
+        "msg": "Conferência aprovada com sucesso",
+        "status": conferencia.status.value,
+        "versao": conferencia.versao
     }

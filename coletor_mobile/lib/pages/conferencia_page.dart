@@ -27,6 +27,9 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
   bool registrando = false;
   bool finalizando = false;
 
+  // Controla para que o foco inicial seja aplicado apenas uma vez
+  bool _focoInicialAplicado = false;
+
   @override
   void initState() {
     super.initState();
@@ -34,10 +37,6 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     futureConferencia = conferenciaService.buscarConferencia(
       widget.conferenciaId,
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focarCodigo();
-    });
   }
 
   @override
@@ -56,10 +55,20 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
   void _focarCodigo() {
     if (!mounted) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      FocusScope.of(context).requestFocus(codigoFocusNode);
+      if (!registrando && !finalizando) {
+        FocusScope.of(context).requestFocus(codigoFocusNode);
+
+        // Dá tempo para o Android aplicar o foco
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (!mounted) return;
+
+        // Mantém o foco no campo, mas não abre o teclado virtual
+        await SystemChannels.textInput.invokeMethod('TextInput.hide');
+      }
     });
   }
 
@@ -446,6 +455,23 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
 
           final finalizada = statusConferencia.toUpperCase() == 'FINALIZADA';
 
+          // --------------------------------------------------
+          // FOCO INICIAL
+          // --------------------------------------------------
+
+          if (!_focoInicialAplicado &&
+              !finalizada &&
+              !registrando &&
+              !finalizando) {
+            _focoInicialAplicado = true;
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+
+              _focarCodigo();
+            });
+          }
+
           final itens = dados['itens'] as List<dynamic>? ?? [];
 
           final conferidos = itens.where((item) {
@@ -482,8 +508,9 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                     TextField(
                       controller: codigoController,
                       focusNode: codigoFocusNode,
-                      autofocus: true,
-                      keyboardType: TextInputType.number,
+                      autofocus: false,
+                      showCursor: false,
+                      keyboardType: TextInputType.none,
                       textInputAction: TextInputAction.done,
                       enabled: !registrando && !finalizada,
                       decoration: const InputDecoration(
@@ -738,7 +765,9 @@ class _ResumoItem extends StatelessWidget {
     return Column(
       children: [
         Icon(icone, size: 22),
+
         const SizedBox(height: 4),
+
         Text(
           valor,
           textAlign: TextAlign.center,
@@ -746,7 +775,9 @@ class _ResumoItem extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
+
         const SizedBox(height: 2),
+
         Text(
           titulo,
           textAlign: TextAlign.center,
