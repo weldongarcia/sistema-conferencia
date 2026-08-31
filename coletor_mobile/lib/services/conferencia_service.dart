@@ -5,8 +5,7 @@ import 'package:coletor_mobile/models/conferencia.dart';
 import 'package:coletor_mobile/services/auth_service.dart';
 
 class ConferenciaService {
-  static const String baseUrl = 'http://192.168.1.223:8000';
-
+  static const String baseUrl = 'http://192.168.3.41:8000';
   final authService = AuthService();
 
   Future<List<Conferencia>> listarConferencias() async {

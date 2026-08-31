@@ -113,9 +113,6 @@ def criar_contagem(
 
     # ======================================================
     # VERIFICAR SE JÁ EXISTE CONTAGEM
-    #
-    # Isso é importante para produtos que já foram
-    # incluídos anteriormente na conferência.
     # ======================================================
 
     contagem_existente = db.query(
@@ -136,10 +133,6 @@ def criar_contagem(
         # --------------------------------------------------
 
         if contagem_existente:
-
-            # O produto já foi autorizado anteriormente.
-            # Portanto, podemos atualizar sua quantidade
-            # normalmente.
 
             pass
 
@@ -168,25 +161,32 @@ def criar_contagem(
 
         else:
 
-            # A criação da contagem ocorrerá abaixo.
-            #
-            # A existência da Contagem passa a representar
-            # que o produto foi incluído na conferência.
-
             pass
 
     # ======================================================
     # ATUALIZAR CONTAGEM EXISTENTE
+    #
+    # IMPORTANTE:
+    # A nova quantidade é SOMADA à quantidade existente.
+    #
+    # Exemplo:
+    #
+    # existente = 3
+    # nova      = 1
+    #
+    # resultado = 4
     # ======================================================
 
     if contagem_existente:
 
-        if (
+        quantidade_anterior = (
             contagem_existente.quantidade
-            == dados.quantidade
-        ):
+        )
 
-            return contagem_existente
+        quantidade_nova = (
+            quantidade_anterior
+            + dados.quantidade
+        )
 
         # --------------------------------------------------
         # HISTÓRICO DA ALTERAÇÃO
@@ -199,10 +199,12 @@ def criar_contagem(
             codigo=codigo,
 
             valor_anterior=(
-                contagem_existente.quantidade
+                quantidade_anterior
             ),
 
-            valor_novo=dados.quantidade,
+            valor_novo=(
+                quantidade_nova
+            ),
 
             versao=conferencia.versao,
 
@@ -216,7 +218,7 @@ def criar_contagem(
         # --------------------------------------------------
 
         contagem_existente.quantidade = (
-            dados.quantidade
+            quantidade_nova
         )
 
         db.commit()
