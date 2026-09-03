@@ -6,6 +6,10 @@ import 'package:coletor_mobile/services/conferencia_service.dart';
 
 import 'package:coletor_mobile/services/contagem_service.dart';
 
+import 'package:coletor_mobile/services/conferencia_local_service.dart';
+
+import 'package:coletor_mobile/models/conferencia_resumo.dart';
+
 enum ModoContagem { itemAItem, quantidade }
 
 enum OrigemEntrada { bipado, digitado }
@@ -21,7 +25,7 @@ class ConferenciaPage extends StatefulWidget {
 
 class _ConferenciaPageState extends State<ConferenciaPage> {
   final conferenciaService = ConferenciaService();
-
+  final conferenciaLocalService = ConferenciaLocalService();
   final contagemService = ContagemService();
 
   final codigoController = TextEditingController();
@@ -61,9 +65,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
   void initState() {
     super.initState();
 
-    futureConferencia = conferenciaService.buscarConferencia(
-      widget.conferenciaId,
-    );
+    futureConferencia = _carregarConferencia();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       focarCodigo();
@@ -81,6 +83,69 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
     super.dispose();
   }
 
+  Future<Map<String, dynamic>> _carregarConferencia() async {
+    // 1. Tenta carregar do SQLite
+    final conferenciaLocal = await conferenciaLocalService.buscarConferencia(
+      widget.conferenciaId,
+    );
+
+    if (conferenciaLocal != null) {
+      final itens = await conferenciaLocalService.listarItens(
+        widget.conferenciaId,
+      );
+
+      return {
+        'id': widget.conferenciaId,
+        'status': conferenciaLocal['status'],
+        'status_conferencia': conferenciaLocal['status_conferencia'],
+        'versao': conferenciaLocal['versao'],
+        'itens': itens,
+        'total_itens': itens.length,
+        'divergentes': itens.where((item) {
+          return (item['divergente'] ?? 0) == 1;
+        }).length,
+      };
+    }
+
+    // 2. Se não existe localmente, baixa do servidor
+    final dadosServidor = await conferenciaService.buscarConferencia(
+      widget.conferenciaId,
+    );
+
+    // 3. Converte para o model
+    final conferencia = ConferenciaResumo.fromJson(dadosServidor);
+
+    // 4. Salva no SQLite
+    await conferenciaLocalService.salvarConferencia(
+      conferenciaId: widget.conferenciaId,
+      conferencia: conferencia,
+    );
+
+    // 5. Retorna os dados locais
+    final conferenciaSalva = await conferenciaLocalService.buscarConferencia(
+      widget.conferenciaId,
+    );
+
+    if (conferenciaSalva == null) {
+      throw Exception('Não foi possível salvar a conferência localmente.');
+    }
+
+    final itens = await conferenciaLocalService.listarItens(
+      widget.conferenciaId,
+    );
+
+    return {
+      'id': widget.conferenciaId,
+      'status': conferenciaSalva['status'],
+      'status_conferencia': conferenciaSalva['status_conferencia'],
+      'versao': conferenciaSalva['versao'],
+      'itens': itens,
+      'total_itens': itens.length,
+      'divergentes': itens.where((item) {
+        return (item['divergente'] ?? 0) == 1;
+      }).length,
+    };
+  }
   // ==========================================================
 
   // FOCO / TECLADO ANDROID
@@ -110,23 +175,26 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
   }
 
   // ==========================================================
-
   // RECARREGAR
-
   // ==========================================================
 
   Future<void> recarregar() async {
+    if (registrando || finalizando) return;
+
     setState(() {
-      futureConferencia = conferenciaService.buscarConferencia(
-        widget.conferenciaId,
-      );
+      futureConferencia = _carregarConferencia();
     });
 
-    await futureConferencia;
+    try {
+      await futureConferencia;
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    focarCodigo();
+      focarCodigo();
+    } catch (_) {
+      if (!mounted) return;
+      focarCodigo();
+    }
   }
 
   // ==========================================================
@@ -621,7 +689,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
                               )
                             : ListView.separated(
                                 itemCount: filtrados.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const Divider(height: 1),
                                 itemBuilder: (_, index) {
                                   final item = filtrados[index];
@@ -717,9 +785,7 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
       mostrarMensagem('Conferência finalizada com sucesso.');
 
       setState(() {
-        futureConferencia = conferenciaService.buscarConferencia(
-          widget.conferenciaId,
-        );
+        futureConferencia = _carregarConferencia();
       });
 
       await futureConferencia;

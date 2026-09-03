@@ -23,15 +23,13 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
-  // ==========================================================
   // CRIAÇÃO DO BANCO
-  // ==========================================================
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
@@ -60,7 +58,8 @@ class AppDatabase {
         justificado INTEGER NOT NULL DEFAULT 0,
         justificativa_tipo TEXT,
         justificativa_descricao TEXT,
-        status TEXT NOT NULL DEFAULT 'PENDENTE'
+        status TEXT NOT NULL DEFAULT 'PENDENTE',
+        origem TEXT NOT NULL DEFAULT 'NF'
       )
     ''');
 
@@ -113,9 +112,7 @@ class AppDatabase {
     });
   }
 
-  // ==========================================================
   // MIGRAÇÃO DA VERSÃO 1 → 2
-  // ==========================================================
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
@@ -240,6 +237,16 @@ class AppDatabase {
         'chave': 'versao_produtos',
         'valor': '0',
       });
+    }
+    // ==========================================================
+    // MIGRAÇÃO DA VERSÃO 2 → 3
+    // ==========================================================
+
+    if (oldVersion < 3) {
+      await db.execute('''
+    ALTER TABLE itens_conferencia
+    ADD COLUMN origem TEXT NOT NULL DEFAULT 'NF'
+  ''');
     }
   }
 }
