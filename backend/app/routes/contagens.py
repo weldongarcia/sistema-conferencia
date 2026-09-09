@@ -21,6 +21,12 @@ from app.utils.auth import get_current_user
 
 from app.core.perfis import CONFERENTE
 
+from app.schemas.sincronizacao import SincronizacaoContagem
+
+from app.services.sincronizacao_service import (
+    sincronizar_contagem
+)
+
 
 router = APIRouter(
     prefix="/contagens",
@@ -64,6 +70,29 @@ def criar_contagem(
 
     return criar_contagem_service(
         db,
+        dados,
+        usuario
+    )
+
+@router.post("/sincronizar/{conferencia_id}")
+def sincronizar_conferencia(
+    conferencia_id: int,
+
+    dados: SincronizacaoContagem,
+
+    db: Session = Depends(get_db),
+
+    usuario=Depends(get_current_user)
+):
+
+    exigir_perfil(
+        usuario,
+        [CONFERENTE]
+    )
+
+    return sincronizar_contagem(
+        db,
+        conferencia_id,
         dados,
         usuario
     )

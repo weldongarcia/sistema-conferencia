@@ -1,1062 +1,761 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter/services.dart';
 
-import 'package:coletor_mobile/services/conferencia_service.dart';
-
-import 'package:coletor_mobile/services/contagem_service.dart';
-
-import 'package:coletor_mobile/services/conferencia_local_service.dart';
-
 import 'package:coletor_mobile/models/conferencia_resumo.dart';
+import 'package:coletor_mobile/services/auth_service.dart';
+import 'package:coletor_mobile/services/conferencia_local_service.dart';
+import 'package:coletor_mobile/services/conferencia_service.dart';
+import 'package:coletor_mobile/services/contagem_local_service.dart';
 
-enum ModoContagem { itemAItem, quantidade }
+enum ModoContagem { unidade, quantidade }
 
 enum OrigemEntrada { bipado, digitado }
 
 class ConferenciaPage extends StatefulWidget {
   final int conferenciaId;
-
   const ConferenciaPage({super.key, required this.conferenciaId});
-
   @override
   State<ConferenciaPage> createState() => _ConferenciaPageState();
 }
 
 class _ConferenciaPageState extends State<ConferenciaPage> {
+  final local = ConferenciaLocalService();
   final conferenciaService = ConferenciaService();
-  final conferenciaLocalService = ConferenciaLocalService();
-  final contagemService = ContagemService();
+  final contagem = ContagemLocalService();
+  final auth = AuthService();
+  final codigo = TextEditingController();
+  final quantidade = TextEditingController();
+  final foco = FocusNode();
 
-  final codigoController = TextEditingController();
-
-  final quantidadeController = TextEditingController(text: '1');
-
-  final codigoFocusNode = FocusNode();
-
-  late Future<Map<String, dynamic>> futureConferencia;
-
-  bool registrando = false;
-
+  late Future<Map<String, dynamic>> dadosFuture;
+  ModoContagem modo = ModoContagem.unidade;
+  OrigemEntrada origem = OrigemEntrada.bipado;
+  bool caixaFechada = false;
+  bool ocupado = false;
   bool finalizando = false;
-
-  ModoContagem modoContagem = ModoContagem.itemAItem;
-
-  OrigemEntrada origemCodigo = OrigemEntrada.bipado;
-
-  String? codigoAtual;
-
-  Map<String, dynamic>? produtoAtual;
-
+  String volume = '0000';
   String? ultimoCodigo;
-
   String? ultimaDescricao;
-
   int ultimaQuantidade = 0;
 
-  OrigemEntrada? ultimaOrigem;
+  // Estado do modo quantidade.
+  // Quando preenchido, significa que o código já foi pesquisado
+  // e estamos aguardando a quantidade.
+  String? codigoQuantidadePendente;
+  String? descricaoQuantidadePendente;
 
-  ModoContagem? ultimoMetodo;
-
-  bool get quantidadeSelecionada =>
-      modoContagem == ModoContagem.quantidade && codigoAtual != null;
+  bool get aguardandoQuantidade => codigoQuantidadePendente != null;
 
   @override
   void initState() {
     super.initState();
-
-    futureConferencia = _carregarConferencia();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      focarCodigo();
-    });
+    dadosFuture = _carregar();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focar());
   }
 
   @override
   void dispose() {
-    codigoController.dispose();
-
-    quantidadeController.dispose();
-
-    codigoFocusNode.dispose();
-
+    codigo.dispose();
+    quantidade.dispose();
+    foco.dispose();
     super.dispose();
   }
 
-  Future<Map<String, dynamic>> _carregarConferencia() async {
-    // 1. Tenta carregar do SQLite
-    final conferenciaLocal = await conferenciaLocalService.buscarConferencia(
+  int _int(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+
+  Future<Map<String, dynamic>> _carregar() async {
+    final localConf = await local.buscarConferencia(widget.conferenciaId);
+    if (localConf != null) return _dadosLocais(localConf);
+
+    final json = await conferenciaService.buscarConferencia(
       widget.conferenciaId,
     );
-
-    if (conferenciaLocal != null) {
-      final itens = await conferenciaLocalService.listarItens(
-        widget.conferenciaId,
-      );
-
-      return {
-        'id': widget.conferenciaId,
-        'status': conferenciaLocal['status'],
-        'status_conferencia': conferenciaLocal['status_conferencia'],
-        'versao': conferenciaLocal['versao'],
-        'itens': itens,
-        'total_itens': itens.length,
-        'divergentes': itens.where((item) {
-          return (item['divergente'] ?? 0) == 1;
-        }).length,
-      };
-    }
-
-    // 2. Se não existe localmente, baixa do servidor
-    final dadosServidor = await conferenciaService.buscarConferencia(
-      widget.conferenciaId,
-    );
-
-    // 3. Converte para o model
-    final conferencia = ConferenciaResumo.fromJson(dadosServidor);
-
-    // 4. Salva no SQLite
-    await conferenciaLocalService.salvarConferencia(
+    final conf = ConferenciaResumo.fromJson(json);
+    await local.salvarConferencia(
       conferenciaId: widget.conferenciaId,
-      conferencia: conferencia,
+      conferencia: conf,
     );
-
-    // 5. Retorna os dados locais
-    final conferenciaSalva = await conferenciaLocalService.buscarConferencia(
-      widget.conferenciaId,
-    );
-
-    if (conferenciaSalva == null) {
+    final salva = await local.buscarConferencia(widget.conferenciaId);
+    if (salva == null)
       throw Exception('Não foi possível salvar a conferência localmente.');
-    }
+    return _dadosLocais(salva);
+  }
 
-    final itens = await conferenciaLocalService.listarItens(
-      widget.conferenciaId,
-    );
-
+  Future<Map<String, dynamic>> _dadosLocais(Map<String, dynamic> conf) async {
+    final bruto = await local.listarItens(widget.conferenciaId);
+    final itens = bruto.map((e) {
+      final m = Map<String, dynamic>.from(e);
+      m['contado'] = _int(m['quantidade_contada']);
+      m['esperado'] = _int(m['quantidade_esperada']);
+      m['id'] = _int(m['id']);
+      return m;
+    }).toList();
+    final nf = itens
+        .where((e) => e['origem']?.toString().toUpperCase() == 'NF')
+        .toList();
     return {
-      'id': widget.conferenciaId,
-      'status': conferenciaSalva['status'],
-      'status_conferencia': conferenciaSalva['status_conferencia'],
-      'versao': conferenciaSalva['versao'],
+      'status_conferencia': conf['status_conferencia'],
+      'status': conf['status'],
+      'versao': conf['versao'],
       'itens': itens,
-      'total_itens': itens.length,
-      'divergentes': itens.where((item) {
-        return (item['divergente'] ?? 0) == 1;
-      }).length,
+      'total': nf.length,
+      'conferidos': nf.where((e) => _int(e['contado']) > 0).length,
+      'divergentes': itens.where((e) => _int(e['divergente']) == 1).length,
     };
   }
-  // ==========================================================
 
-  // FOCO / TECLADO ANDROID
+  void _focar() {
+    if (!mounted || finalizando || aguardandoQuantidade) return;
 
-  // ==========================================================
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || finalizando || aguardandoQuantidade) return;
 
-  void focarCodigo() {
-    if (!mounted) return;
+      foco.requestFocus();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || registrando || finalizando) return;
-
-      FocusScope.of(context).requestFocus(codigoFocusNode);
-
-      await Future.delayed(const Duration(milliseconds: 80));
-
-      if (!mounted) return;
-
-      // Mantém o teclado do Android fechado.
-
-      await SystemChannels.textInput.invokeMethod('TextInput.hide');
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
     });
   }
 
-  Future<void> fecharTecladoAndroid() async {
-    await SystemChannels.textInput.invokeMethod('TextInput.hide');
-  }
+  void _numero(String n) {
+    if (ocupado || finalizando) return;
 
-  // ==========================================================
-  // RECARREGAR
-  // ==========================================================
+    final controller = aguardandoQuantidade ? quantidade : codigo;
 
-  Future<void> recarregar() async {
-    if (registrando || finalizando) return;
+    controller.text += n;
 
-    setState(() {
-      futureConferencia = _carregarConferencia();
-    });
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
 
-    try {
-      await futureConferencia;
-
-      if (!mounted) return;
-
-      focarCodigo();
-    } catch (_) {
-      if (!mounted) return;
-      focarCodigo();
+    if (!aguardandoQuantidade) {
+      origem = OrigemEntrada.digitado;
     }
+
+    setState(() {});
   }
 
-  // ==========================================================
+  void _apagar() {
+    if (ocupado || finalizando) return;
 
-  // FEEDBACK
+    final controller = aguardandoQuantidade ? quantidade : codigo;
 
-  // ==========================================================
+    if (controller.text.isEmpty) return;
 
-  void feedbackSucesso() {
-    SystemSound.play(SystemSoundType.click);
+    controller.text = controller.text.substring(0, controller.text.length - 1);
 
-    HapticFeedback.lightImpact();
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+
+    if (!aguardandoQuantidade) {
+      origem = OrigemEntrada.digitado;
+    }
+
+    setState(() {});
   }
 
-  void feedbackAlerta() {
-    SystemSound.play(SystemSoundType.alert);
+  void _limpar() {
+    if (ocupado || finalizando) return;
 
-    HapticFeedback.heavyImpact();
+    if (aguardandoQuantidade) {
+      quantidade.clear();
+    } else {
+      codigo.clear();
+      origem = OrigemEntrada.bipado;
+    }
+
+    setState(() {});
   }
 
-  // ==========================================================
+  Future<void> _principal() async {
+    if (ocupado || finalizando) return;
 
-  // TECLADO NA TELA
+    // ==========================================================
+    // MODO QUANTIDADE
+    // ==========================================================
 
-  // ==========================================================
+    if (modo == ModoContagem.quantidade) {
+      // Já pesquisou o produto?
+      // Então o botão agora é GRAVAR.
+      if (aguardandoQuantidade) {
+        final q = int.tryParse(quantidade.text.trim());
 
-  TextEditingController get controladorTeclado =>
-      quantidadeSelecionada ? quantidadeController : codigoController;
+        if (q == null || q <= 0) {
+          _msg('Informe uma quantidade válida.', erro: true);
+          return;
+        }
 
-  void adicionarNumero(String numero) {
-    final controller = controladorTeclado;
+        await _registrarQuantidade(codigoQuantidadePendente!, q);
 
-    final atual = controller.text;
-
-    if (quantidadeSelecionada) {
-      if (atual == '0' || atual == '1') {
-        controller.text = numero;
-      } else {
-        controller.text = '$atual$numero';
+        return;
       }
-    } else {
-      controller.text = '$atual$numero';
-    }
 
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
+      // Ainda não pesquisou.
+      // O botão é BUSCAR.
+      final c = codigo.text.trim();
 
-    setState(() {});
+      if (c.isEmpty) {
+        _msg('Bipe ou informe o código.', erro: true);
+        _focar();
+        return;
+      }
 
-    fecharTecladoAndroid();
-  }
-
-  void apagarNumero() {
-    final controller = controladorTeclado;
-
-    final atual = controller.text;
-
-    if (atual.isEmpty) return;
-
-    controller.text = atual.length == 1
-        ? ''
-        : atual.substring(0, atual.length - 1);
-
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
-
-    setState(() {});
-
-    fecharTecladoAndroid();
-  }
-
-  void limparCampo() {
-    controladorTeclado.clear();
-
-    setState(() {});
-
-    fecharTecladoAndroid();
-  }
-
-  void teclaConfirmar() {
-    if (quantidadeSelecionada) {
-      registrar();
-    } else {
-      processarCodigo();
-    }
-  }
-
-  // ==========================================================
-
-  // CÓDIGO
-
-  // ==========================================================
-
-  void marcarEntradaDigitada() {
-    if (registrando || finalizando) return;
-
-    if (codigoController.text.isNotEmpty) {
-      origemCodigo = OrigemEntrada.digitado;
-    }
-  }
-
-  void processarCodigo() {
-    if (registrando || finalizando) return;
-
-    final codigo = codigoController.text.trim();
-
-    if (codigo.isEmpty) {
-      mostrarMensagem('Leia ou informe o código do produto.', erro: true);
-
-      focarCodigo();
+      await _buscarProdutoParaQuantidade(c);
 
       return;
     }
 
-    buscarProduto(codigo);
+    // ==========================================================
+    // MODO ITEM A ITEM
+    // ==========================================================
+
+    final c = codigo.text.trim();
+
+    if (c.isEmpty) {
+      _msg('Bipe ou informe o código.', erro: true);
+      _focar();
+      return;
+    }
+
+    await _registrar(
+      c,
+      1,
+      caixaFechada ? TipoContagem.caixaFechada : TipoContagem.unidade,
+    );
   }
 
-  Future<void> buscarProduto(String codigo) async {
-    if (registrando || finalizando) return;
+  Future<void> _buscarProdutoParaQuantidade(String c) async {
+    if (ocupado || finalizando) return;
+
+    final itens = await local.listarItens(widget.conferenciaId);
+
+    Map<String, dynamic>? itemAtual;
+
+    for (final item in itens) {
+      if (item['codigo']?.toString().trim() == c.trim()) {
+        itemAtual = Map<String, dynamic>.from(item);
+        break;
+      }
+    }
+
+    if (!mounted) return;
+
+    if (itemAtual == null) {
+      _msg('Produto não encontrado na conferência.', erro: true);
+      return;
+    }
+
+    final descricao = itemAtual['descricao']?.toString();
+
+    setState(() {
+      codigoQuantidadePendente = c;
+
+      descricaoQuantidadePendente = descricao != null && descricao.isNotEmpty
+          ? descricao
+          : 'Produto não identificado';
+
+      codigo.clear();
+      quantidade.clear();
+    });
+
+    // Não queremos mais o foco no campo do código.
+    // Agora os números do teclado serão quantidade.
+    FocusScope.of(context).unfocus();
+
+    SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+  }
+
+  Future<void> _quantidadeDialog(String c) async {
+    quantidade.clear();
+    final q = await showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _QuantidadeDialog(
+        codigo: c,
+        caixas: caixaFechada,
+        controller: quantidade,
+        cancelar: () => Navigator.pop(ctx),
+        gravar: () {
+          final n = int.tryParse(quantidade.text.trim());
+          if (n != null && n > 0) Navigator.pop(ctx, n);
+        },
+      ),
+    );
+    if (q == null || !mounted) {
+      _focar();
+      return;
+    }
+    await _registrarQuantidade(c, q);
+  }
+
+  Future<void> _registrarQuantidade(String c, int q) async {
+    if (ocupado || finalizando) return;
+
+    setState(() => ocupado = true);
 
     try {
-      final dados = await futureConferencia;
+      final r = await contagem.registrarQuantidade(
+        conferenciaId: widget.conferenciaId,
+        codigo: c,
+        quantidade: q,
+        tipoContagem: caixaFechada
+            ? TipoContagem.caixaFechada
+            : TipoContagem.unidade,
+        origem: origem == OrigemEntrada.bipado
+            ? 'BIPAGEM_QUANTIDADE'
+            : 'DIGITACAO_QUANTIDADE',
+      );
 
-      if (!mounted) return;
+      // Busca novamente no SQLite.
+      final itens = await local.listarItens(widget.conferenciaId);
 
-      final itens = dados['itens'] as List<dynamic>? ?? [];
-
-      Map<String, dynamic>? encontrado;
+      Map<String, dynamic>? itemAtual;
 
       for (final item in itens) {
-        final codigoItem = item['codigo']?.toString().trim();
-
-        if (codigoItem == codigo.trim()) {
-          encontrado = Map<String, dynamic>.from(item);
-
+        if (item['codigo']?.toString().trim() == c.trim()) {
+          itemAtual = Map<String, dynamic>.from(item);
           break;
         }
       }
 
-      setState(() {
-        codigoAtual = codigo.trim();
+      if (!mounted) return;
 
-        produtoAtual = encontrado;
+      final descricao = itemAtual?['descricao']?.toString();
+
+      final quantidadeAtual = itemAtual == null
+          ? r.quantidadeContada
+          : _int(itemAtual['quantidade_contada']);
+
+      setState(() {
+        ultimoCodigo = c;
+
+        ultimaDescricao = descricao?.isNotEmpty == true
+            ? descricao
+            : 'Produto não identificado';
+
+        ultimaQuantidade = quantidadeAtual;
+
+        codigo.clear();
+        quantidade.clear();
+
+        codigoQuantidadePendente = null;
+        descricaoQuantidadePendente = null;
+
+        origem = OrigemEntrada.bipado;
       });
 
-      if (encontrado == null) {
-        feedbackAlerta();
+      SystemSound.play(SystemSoundType.click);
+      HapticFeedback.lightImpact();
 
-        await perguntarIncluirNaConferencia(codigo.trim());
-
-        return;
-      }
-
-      // ITEM A ITEM:
-
-      // encontrou -> registra automaticamente 1 unidade.
-
-      if (modoContagem == ModoContagem.itemAItem) {
-        await registrar(codigoForcado: codigo.trim(), quantidadeForcada: 1);
-
-        return;
-      }
-
-      // QUANTIDADE:
-
-      // encontrou -> fica aguardando a quantidade.
-
-      quantidadeController.text = '1';
-
-      await fecharTecladoAndroid();
-
-      if (!mounted) return;
-
-      setState(() {});
-    } catch (e) {
-      if (!mounted) return;
-
-      feedbackAlerta();
-
-      mostrarMensagem(e.toString().replaceFirst('Exception: ', ''), erro: true);
-
-      focarCodigo();
-    }
-  }
-
-  // ==========================================================
-
-  // REGISTRAR
-
-  // ==========================================================
-
-  Future<void> registrar({
-    String? codigoForcado,
-
-    int? quantidadeForcada,
-
-    bool incluirNaConferencia = false,
-  }) async {
-    if (registrando) return;
-
-    final codigo = (codigoForcado ?? codigoController.text).trim();
-
-    final quantidade =
-        quantidadeForcada ?? int.tryParse(quantidadeController.text.trim());
-
-    if (codigo.isEmpty) {
-      mostrarMensagem('Leia ou informe o código de barras.', erro: true);
-
-      focarCodigo();
-
-      return;
-    }
-
-    if (quantidade == null || quantidade <= 0) {
-      mostrarMensagem('Informe uma quantidade válida.', erro: true);
-
-      return;
-    }
-
-    setState(() {
-      registrando = true;
-    });
-
-    try {
-      final resultado = await contagemService.registrarContagem(
-        conferenciaId: widget.conferenciaId,
-
-        codigo: codigo,
-
-        quantidade: quantidade,
-
-        incluirNaConferencia: incluirNaConferencia,
+      _msg(
+        caixaFechada
+            ? '$c: +${r.quantidadeAdicionada} unidades'
+            : '$c: +$q unidades',
       );
 
-      if (!mounted) return;
-
-      final codigoRegistrado = resultado['codigo']?.toString() ?? codigo;
-
-      String? descricaoRegistrada;
-
-      if (produtoAtual != null &&
-          produtoAtual!['codigo']?.toString() == codigoRegistrado) {
-        descricaoRegistrada = produtoAtual!['descricao']?.toString();
-      }
-
-      final metodoRegistro = modoContagem;
-
-      final origemRegistro = origemCodigo;
-
-      setState(() {
-        ultimoCodigo = codigoRegistrado;
-
-        ultimaDescricao = descricaoRegistrada;
-
-        ultimaQuantidade = quantidade;
-
-        ultimaOrigem = origemRegistro;
-
-        ultimoMetodo = metodoRegistro;
-
-        codigoController.clear();
-
-        quantidadeController.text = '1';
-
-        codigoAtual = null;
-
-        produtoAtual = null;
-
-        futureConferencia = conferenciaService.buscarConferencia(
-          widget.conferenciaId,
-        );
-      });
-
-      feedbackSucesso();
-
-      if (incluirNaConferencia) {
-        mostrarMensagem('Produto $codigoRegistrado incluído.');
-      } else if (metodoRegistro == ModoContagem.itemAItem) {
-        mostrarMensagem('Bip registrado: $codigoRegistrado');
-      } else {
-        mostrarMensagem('Quantidade registrada: $quantidade');
-      }
-
-      await futureConferencia;
-
-      if (!mounted) return;
-
-      focarCodigo();
-    } on ProdutoNaoEncontradoException catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        registrando = false;
-      });
-
-      feedbackAlerta();
-
-      await perguntarIncluirNaConferencia(e.codigo);
-
-      return;
+      await _atualizar();
     } catch (e) {
-      if (!mounted) return;
+      if (mounted) {
+        SystemSound.play(SystemSoundType.alert);
 
-      feedbackAlerta();
-
-      mostrarMensagem(e.toString().replaceFirst('Exception: ', ''), erro: true);
-
-      focarCodigo();
+        _msg(e.toString().replaceFirst('Exception: ', ''), erro: true);
+      }
     } finally {
       if (mounted) {
-        setState(() {
-          registrando = false;
-        });
+        setState(() => ocupado = false);
+        _focar();
       }
     }
   }
 
-  // ==========================================================
+  Future<void> _registrar(String c, int q, TipoContagem tipo) async {
+    if (ocupado || finalizando) return;
 
-  // PRODUTO NÃO ENCONTRADO
+    setState(() => ocupado = true);
 
-  // ==========================================================
+    try {
+      final r = await contagem.registrarBipagem(
+        conferenciaId: widget.conferenciaId,
+        codigo: c,
+        tipoContagem: tipo,
+      );
 
-  Future<void> perguntarIncluirNaConferencia(String codigo) async {
-    if (!mounted) return;
+      // Busca o item novamente no SQLite para garantir
+      // que descrição e quantidade exibidas sejam as atuais.
+      final itens = await local.listarItens(widget.conferenciaId);
 
-    final incluir = await showDialog<bool>(
-      context: context,
+      Map<String, dynamic>? itemAtual;
 
-      barrierDismissible: false,
+      for (final item in itens) {
+        if (item['codigo']?.toString().trim() == c.trim()) {
+          itemAtual = Map<String, dynamic>.from(item);
+          break;
+        }
+      }
 
-      builder: (context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded),
+      if (!mounted) return;
 
-              SizedBox(width: 8),
+      final descricao = itemAtual?['descricao']?.toString();
 
-              Expanded(child: Text('Produto não encontrado')),
-            ],
-          ),
+      final quantidadeAtual = itemAtual == null
+          ? r.quantidadeContada
+          : _int(itemAtual['quantidade_contada']);
 
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-
-            crossAxisAlignment: CrossAxisAlignment.start,
-
-            children: [
-              const Text('Este produto não está presente na nota fiscal.'),
-
-              const SizedBox(height: 12),
-
-              Text(
-                'Código: $codigo',
-
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-
-                  fontSize: 16,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              const Text('Deseja incluir este produto na conferência?'),
-            ],
-          ),
-
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-
-              child: const Text('CANCELAR'),
-            ),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-
-              child: const Text('INCLUIR'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted) return;
-
-    if (incluir != true) {
       setState(() {
-        codigoController.clear();
+        ultimoCodigo = c;
+        ultimaDescricao = descricao?.isNotEmpty == true
+            ? descricao
+            : 'Produto não identificado';
 
-        quantidadeController.text = '1';
+        // IMPORTANTE:
+        // mostra o acumulado, não somente o acréscimo.
+        ultimaQuantidade = quantidadeAtual;
 
-        codigoAtual = null;
-
-        produtoAtual = null;
+        codigo.clear();
+        origem = OrigemEntrada.bipado;
       });
 
-      focarCodigo();
+      SystemSound.play(SystemSoundType.click);
+      HapticFeedback.lightImpact();
 
+      _msg(
+        tipo == TipoContagem.caixaFechada
+            ? '$c: +${r.quantidadeAdicionada} unidades'
+            : '$c: +1 unidade',
+      );
+
+      await _atualizar();
+    } catch (e) {
+      if (mounted) {
+        SystemSound.play(SystemSoundType.alert);
+
+        _msg(e.toString().replaceFirst('Exception: ', ''), erro: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => ocupado = false);
+        _focar();
+      }
+    }
+  }
+
+  Future<void> _atualizar() async {
+    final c = await local.buscarConferencia(widget.conferenciaId);
+    if (c == null || !mounted) return;
+    final d = await _dadosLocais(c);
+    if (mounted) setState(() => dadosFuture = Future.value(d));
+  }
+
+  void _trocarModo() {
+    if (ocupado || finalizando) return;
+    setState(() {
+      modo = modo == ModoContagem.unidade
+          ? ModoContagem.quantidade
+          : ModoContagem.unidade;
+      codigo.clear();
+      quantidade.clear();
+      origem = OrigemEntrada.bipado;
+    });
+    _focar();
+  }
+
+  void _trocarCaixa() {
+    if (ocupado || finalizando) return;
+    setState(() {
+      caixaFechada = !caixaFechada;
+      codigo.clear();
+      quantidade.clear();
+      origem = OrigemEntrada.bipado;
+    });
+    _focar();
+  }
+
+  Future<void> _volume() async {
+    final c = TextEditingController();
+    final v = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _NumeroDialog(
+        titulo: 'Número do volume',
+        hint: volume,
+        controller: c,
+        confirmarTexto: 'OK',
+        cancelar: () => Navigator.pop(ctx),
+        confirmar: () => c.text.isNotEmpty ? Navigator.pop(ctx, c.text) : null,
+      ),
+    );
+    c.dispose();
+    if (v != null && mounted) {
+      final n = int.tryParse(v);
+      setState(() => volume = n == null ? v : n.toString().padLeft(4, '0'));
+      _focar();
+    }
+  }
+
+  Future<void> _pesquisa() async {
+    if (ocupado || finalizando) return;
+    final c = TextEditingController();
+    final v = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _NumeroDialog(
+        titulo: 'Pesquisar produto',
+        hint: 'Código',
+        controller: c,
+        confirmarTexto: 'OK',
+        cancelar: () => Navigator.pop(ctx),
+        confirmar: () => c.text.isNotEmpty ? Navigator.pop(ctx, c.text) : null,
+      ),
+    );
+    c.dispose();
+    if (v == null || !mounted) {
+      _focar();
       return;
     }
 
-    codigoController.text = codigo;
-
-    await registrar(incluirNaConferencia: true);
-  }
-
-  // ==========================================================
-
-  // PESQUISA DE PRODUTOS JÁ REGISTRADOS
-  // ============================================================
-
-  Future<void> _abrirPesquisaBipados(List<dynamic> itens) async {
+    final itens = await local.listarItens(widget.conferenciaId);
+    Map<String, dynamic>? item;
+    for (final e in itens) {
+      if (e['codigo']?.toString().trim() == v.trim()) {
+        item = Map<String, dynamic>.from(e);
+        break;
+      }
+    }
     if (!mounted) return;
-
-    final registrados = itens
-        .where((item) => numero(item['contado']) > 0)
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-
-    final pesquisaController = TextEditingController();
-
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              final termo = pesquisaController.text.trim().toLowerCase();
-
-              final filtrados = registrados.where((item) {
-                final codigo = item['codigo']?.toString().toLowerCase() ?? '';
-                final descricao =
-                    item['descricao']?.toString().toLowerCase() ?? '';
-                return termo.isEmpty ||
-                    codigo.contains(termo) ||
-                    descricao.contains(termo);
-              }).toList();
-
-              return AlertDialog(
-                titlePadding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
-                contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                title: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Produtos conferidos',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  height: MediaQuery.of(context).size.height * 0.55,
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: pesquisaController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Código ou descrição',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: (_) => setDialogState(() {}),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: filtrados.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Nenhum produto já conferido encontrado.',
-                                  textAlign: TextAlign.center,
-                                ),
-                              )
-                            : ListView.separated(
-                                itemCount: filtrados.length,
-                                separatorBuilder: (_, _) =>
-                                    const Divider(height: 1),
-                                itemBuilder: (_, index) {
-                                  final item = filtrados[index];
-                                  return ListTile(
-                                    dense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                    ),
-                                    leading: const Icon(
-                                      Icons.check_circle_outline,
-                                      size: 21,
-                                    ),
-                                    title: Text(
-                                      item['descricao']?.toString() ??
-                                          'Produto',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      'Cód. ${item['codigo'] ?? ''}',
-                                      style: const TextStyle(fontSize: 9),
-                                    ),
-                                    trailing: Text(
-                                      'Qtd. ${numero(item['contado'])}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      pesquisaController.dispose();
+    if (item == null || _int(item['quantidade_contada']) <= 0) {
+      _msg('Produto não encontrado ou sem contagem.', erro: true);
+      _focar();
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ManutencaoContagemPage(
+          item: item!,
+          conferenciaId: widget.conferenciaId,
+          usuarioId: auth.usuarioId ?? 0,
+        ),
+      ),
+    );
+    if (mounted) {
+      await _atualizar();
+      _focar();
     }
   }
 
-  // MODO
-
-  // ==========================================================
-
-  void alterarModo(ModoContagem novoModo) {
-    if (registrando || finalizando) return;
-
-    setState(() {
-      modoContagem = novoModo;
-
-      codigoController.clear();
-
-      quantidadeController.text = '1';
-
-      codigoAtual = null;
-
-      produtoAtual = null;
-
-      origemCodigo = OrigemEntrada.bipado;
-    });
-
-    focarCodigo();
-  }
-
-  // ==========================================================
-
-  // FINALIZAR
-
-  // ==========================================================
-
-  Future<void> finalizarConferencia() async {
-    if (finalizando) return;
-
-    setState(() {
-      finalizando = true;
-    });
-
+  Future<void> _finalizar() async {
+    if (ocupado || finalizando) return;
+    final d = await dadosFuture;
+    if (_int(d['conferidos']) < _int(d['total'])) {
+      _msg('Ainda existem produtos da NF sem contagem.', erro: true);
+      return;
+    }
+    if (_int(d['divergentes']) > 0) {
+      _msg('Não é possível finalizar com divergências.', erro: true);
+      return;
+    }
+    setState(() => finalizando = true);
     try {
       await conferenciaService.fecharConferencia(widget.conferenciaId);
-
       if (!mounted) return;
-
-      mostrarMensagem('Conferência finalizada com sucesso.');
-
-      setState(() {
-        futureConferencia = _carregarConferencia();
-      });
-
-      await futureConferencia;
+      _msg('Conferência finalizada com sucesso.');
+      setState(() => dadosFuture = _carregar());
+      await dadosFuture;
     } catch (e) {
-      if (!mounted) return;
-
-      feedbackAlerta();
-
-      mostrarMensagem(e.toString().replaceFirst('Exception: ', ''), erro: true);
+      if (mounted)
+        _msg(e.toString().replaceFirst('Exception: ', ''), erro: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          finalizando = false;
-        });
-      }
+      if (mounted) setState(() => finalizando = false);
     }
   }
 
-  // ==========================================================
-
-  // MENSAGEM
-
-  // ==========================================================
-
-  void mostrarMensagem(String mensagem, {bool erro = false}) {
+  void _msg(String text, {bool erro = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(mensagem),
-
-          backgroundColor: erro ? Colors.red : null,
-
+          content: Text(text),
+          backgroundColor: erro ? Colors.red.shade700 : null,
           duration: const Duration(seconds: 2),
         ),
       );
   }
 
-  // ==========================================================
-
-  // CONVERSÃO
-
-  // ==========================================================
-
-  int numero(dynamic valor) {
-    if (valor is num) return valor.toInt();
-
-    return num.tryParse(valor?.toString() ?? '')?.toInt() ?? 0;
-  }
-
-  // ==========================================================
-
-  // BUILD
-
-  // ==========================================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-
       appBar: AppBar(
-        toolbarHeight: 46,
-
-        title: Text(
-          'Conferência #${widget.conferenciaId}',
-
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-
+        title: Text('Conferência #${widget.conferenciaId}'),
         actions: [
           IconButton(
-            tooltip: 'Atualizar',
+            onPressed: ocupado || finalizando
+                ? null
+                : () async {
+                    final futuro = _carregar();
 
-            onPressed: registrando || finalizando ? null : recarregar,
+                    setState(() {
+                      dadosFuture = futuro;
+                    });
 
-            icon: const Icon(Icons.refresh, size: 21),
+                    try {
+                      await futuro;
+
+                      if (mounted) {
+                        _focar();
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        _msg(
+                          e.toString().replaceFirst('Exception: ', ''),
+                          erro: true,
+                        );
+                      }
+                    }
+                  },
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-
       body: FutureBuilder<Map<String, dynamic>>(
-        future: futureConferencia,
-
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        future: dadosFuture,
+        builder: (context, s) {
+          if (s.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-
-                  children: [
-                    const Icon(Icons.error_outline, size: 50),
-
-                    const SizedBox(height: 12),
-
-                    Text(
-                      'Erro ao carregar conferência:\n'
-                      '${snapshot.error}',
-
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    ElevatedButton(
-                      onPressed: recarregar,
-
-                      child: const Text('TENTAR NOVAMENTE'),
-                    ),
-                  ],
-                ),
-              ),
-            );
+          if (s.hasError) {
+            return Center(child: Text('Erro: ${s.error}'));
           }
-
-          final dados = snapshot.data;
-
-          if (dados == null) {
-            return const Center(child: Text('Nenhum dado encontrado.'));
-          }
-
-          final total = numero(dados['total_itens']);
-
-          final divergentes = numero(dados['divergentes']);
-
-          final status = dados['status_conferencia']?.toString() ?? '';
-
-          final finalizada = status.toUpperCase() == 'FINALIZADA';
-
-          final itens = dados['itens'] as List<dynamic>? ?? [];
-
-          final conferidos = itens.where((item) {
-            return numero(item['contado']) > 0;
-          }).length;
-
-          final percentual = total > 0 ? conferidos / total : 0.0;
+          final d = s.data ?? {};
+          final total = _int(d['total']);
+          final conferidos = _int(d['conferidos']);
+          final divergentes = _int(d['divergentes']);
+          final finalizada =
+              d['status_conferencia']?.toString().toUpperCase() == 'FINALIZADA';
+          final p = total == 0 ? 0.0 : (conferidos / total).clamp(0.0, 1.0);
 
           return SafeArea(
             child: Column(
               children: [
-                _CabecalhoCompacto(
-                  percentual: percentual,
-                  status: status,
-                  ultimoCodigo: ultimoCodigo,
-                  ultimaDescricao: ultimaDescricao,
-                  ultimaQuantidade: ultimaQuantidade,
-                  ultimaOrigem: ultimaOrigem,
-                  ultimoMetodo: ultimoMetodo,
-                  onPesquisar: finalizada
-                      ? null
-                      : () => _abrirPesquisaBipados(itens),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 1, 8, 3),
-                  child: _SeletorModo(
-                    modo: modoContagem,
-                    enabled: !registrando && !finalizada,
-                    onChanged: alterarModo,
-                  ),
+                _UltimoRegistro(
+                  codigo: ultimoCodigo,
+                  descricao: ultimaDescricao,
+                  quantidade: ultimaQuantidade,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: _CampoCodigo(
-                    controller: codigoController,
-                    focusNode: codigoFocusNode,
-                    enabled: !registrando && !finalizada,
-                    onChanged: (_) {
-                      if (codigoController.text.isNotEmpty) {
-                        origemCodigo = OrigemEntrada.digitado;
-                      }
-                    },
-                    onSubmitted: (_) => processarCodigo(),
-                    onBuscar: processarCodigo,
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(value: p, minHeight: 6),
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Itens: $conferidos/$total'),
+                          Text(
+                            'Div.: $divergentes',
+                            style: TextStyle(
+                              color: divergentes > 0
+                                  ? Colors.red
+                                  : Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                if (modoContagem == ModoContagem.quantidade &&
-                    produtoAtual != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
-                    child: _ProdutoSelecionado(
-                      codigo: codigoAtual ?? '',
-                      descricao: produtoAtual?['descricao']?.toString() ?? '',
+                _Ferramentas(
+                  quantidade: modo == ModoContagem.quantidade,
+                  caixa: caixaFechada,
+                  volume: volume,
+                  enabled: !finalizada && !ocupado && !finalizando,
+                  onQuantidade: _trocarModo,
+                  onCaixa: _trocarCaixa,
+                  onVolume: _volume,
+                  onPesquisa: _pesquisa,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                  child: TextField(
+                    controller: aguardandoQuantidade ? quantidade : codigo,
+
+                    focusNode: aguardandoQuantidade ? null : foco,
+
+                    enabled: !finalizada && !ocupado && !finalizando,
+
+                    keyboardType: TextInputType.none,
+
+                    readOnly: aguardandoQuantidade,
+
+                    showCursor: true,
+
+                    onChanged: (_) {
+                      if (!aguardandoQuantidade) {
+                        origem = OrigemEntrada.digitado;
+                      }
+
+                      setState(() {});
+                    },
+
+                    decoration: InputDecoration(
+                      hintText: aguardandoQuantidade
+                          ? 'Quantidade...'
+                          : 'Código do item...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: const OutlineInputBorder(),
                     ),
+
+                    style: const TextStyle(fontSize: 24),
                   ),
-                const SizedBox(height: 3),
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: SizedBox(
                     width: double.infinity,
-                    height: 38,
-                    child: ElevatedButton.icon(
-                      onPressed: (!registrando && !finalizada)
-                          ? teclaConfirmar
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: !finalizada && !ocupado && !finalizando
+                          ? _principal
                           : null,
-                      icon: Icon(
-                        modoContagem == ModoContagem.quantidade &&
-                                produtoAtual != null
-                            ? Icons.check
-                            : Icons.search,
-                        size: 17,
-                      ),
-                      label: Text(
-                        modoContagem == ModoContagem.quantidade &&
-                                produtoAtual != null
-                            ? 'REGISTRAR QUANTIDADE'
-                            : 'BUSCAR / REGISTRAR',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Text(
+                        modo == ModoContagem.unidade ? 'BUSCAR' : 'GRAVAR',
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Expanded(
-                  child: _TecladoNumerico(
-                    titulo: quantidadeSelecionada ? 'QUANTIDADE' : 'CÓDIGO',
-                    valor: controladorTeclado.text,
-                    enabled: !registrando && !finalizada,
-                    modoQuantidade: quantidadeSelecionada,
-                    onNumero: adicionarNumero,
-                    onApagar: apagarNumero,
-                    onLimpar: limparCampo,
-                    onConfirmar: teclaConfirmar,
+                  child: _Teclado(
+                    enabled: !finalizada && !ocupado && !finalizando,
+                    numero: _numero,
+                    apagar: _apagar,
+                    limpar: _limpar,
+                    confirmar: _principal,
                   ),
                 ),
-                if (!finalizada &&
-                    conferidos == total &&
-                    total > 0 &&
-                    divergentes == 0)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 38,
-                      child: ElevatedButton.icon(
-                        onPressed: finalizando ? null : finalizarConferencia,
-                        icon: finalizando
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.lock_outline, size: 17),
-                        label: Text(
-                          finalizando
-                              ? 'FINALIZANDO...'
-                              : 'FINALIZAR CONFERÊNCIA',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 42,
+                    child: ElevatedButton(
+                      onPressed: !finalizada && !ocupado && !finalizando
+                          ? _finalizar
+                          : null,
+                      child: Text(
+                        finalizada
+                            ? 'CONFERÊNCIA FINALIZADA'
+                            : 'FINALIZAR CONFERÊNCIA',
                       ),
                     ),
                   ),
-                if (finalizada)
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(8, 2, 8, 4),
-                    child: _FinalizadaCompacto(),
-                  ),
+                ),
               ],
             ),
           );
@@ -1066,875 +765,617 @@ class _ConferenciaPageState extends State<ConferenciaPage> {
   }
 }
 
-// ============================================================
-
-// CABEÇALHO
-// ============================================================
-
-class _CabecalhoCompacto extends StatelessWidget {
-  final double percentual;
-  final String status;
-  final String? ultimoCodigo;
-  final String? ultimaDescricao;
-  final int ultimaQuantidade;
-  final OrigemEntrada? ultimaOrigem;
-  final ModoContagem? ultimoMetodo;
-  final VoidCallback? onPesquisar;
-
-  const _CabecalhoCompacto({
-    required this.percentual,
-    required this.status,
-    required this.ultimoCodigo,
-    required this.ultimaDescricao,
-    required this.ultimaQuantidade,
-    required this.ultimaOrigem,
-    required this.ultimoMetodo,
-    required this.onPesquisar,
+class _UltimoRegistro extends StatelessWidget {
+  final String? codigo;
+  final String? descricao;
+  final int quantidade;
+  const _UltimoRegistro({
+    required this.codigo,
+    required this.descricao,
+    required this.quantidade,
   });
-
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 3, 8, 2),
-      child: Column(
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  ultimoCodigo == null
-                      ? Icons.qr_code_scanner
-                      : (ultimaOrigem == OrigemEntrada.bipado
-                            ? Icons.qr_code_scanner
-                            : Icons.keyboard_alt_outlined),
-                  size: 19,
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: ultimoCodigo == null
-                      ? const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ÚLTIMO REGISTRO',
-                              style: TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Aguardando o primeiro registro',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'ÚLTIMO REGISTRO',
-                              style: TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              ultimaDescricao?.isNotEmpty == true
-                                  ? ultimaDescricao!
-                                  : 'Produto não identificado',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              'Cód. $ultimoCodigo',
-                              style: const TextStyle(fontSize: 9),
-                            ),
-                          ],
-                        ),
-                ),
-                if (ultimoCodigo != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+          const Icon(Icons.shopping_cart_outlined, size: 30),
+          const SizedBox(width: 8),
+          Expanded(
+            child: codigo == null
+                ? const Text(
+                    'Aguardando bipagem',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Qtd. $ultimaQuantidade',
-                        style: const TextStyle(
+                      const Text(
+                        'ÚLTIMO REGISTRO',
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        ultimaOrigem == OrigemEntrada.bipado
-                            ? 'BIPADO'
-                            : 'DIGITADO',
+                        descricao?.isNotEmpty == true
+                            ? descricao!
+                            : 'Produto não identificado',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 7,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                IconButton(
-                  tooltip: 'Pesquisar produtos já conferidos',
-                  onPressed: onPesquisar,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 38,
-                    minHeight: 38,
-                  ),
-                  icon: const Icon(Icons.search, size: 22),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: percentual,
-                    minHeight: 5,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '${(percentual * 100).toInt()}%',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              status,
-              style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// SELETOR DE MODO
-
-// ============================================================
-
-class _SeletorModo extends StatelessWidget {
-  final ModoContagem modo;
-
-  final bool enabled;
-
-  final ValueChanged<ModoContagem> onChanged;
-
-  const _SeletorModo({
-    required this.modo,
-
-    required this.enabled,
-
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-
-      child: SegmentedButton<ModoContagem>(
-        segments: const [
-          ButtonSegment<ModoContagem>(
-            value: ModoContagem.itemAItem,
-
-            icon: Icon(Icons.qr_code_scanner, size: 15),
-
-            label: Text(
-              'ITEM A ITEM',
-
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-          ),
-
-          ButtonSegment<ModoContagem>(
-            value: ModoContagem.quantidade,
-
-            icon: Icon(Icons.calculate_outlined, size: 15),
-
-            label: Text(
-              'QUANTIDADE',
-
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-
-        selected: {modo},
-
-        onSelectionChanged: enabled
-            ? (selecionado) {
-                onChanged(selecionado.first);
-              }
-            : null,
-
-        showSelectedIcon: false,
-
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-
-          padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: 5),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-
-// CAMPO DE CÓDIGO
-
-// ============================================================
-
-class _CampoCodigo extends StatelessWidget {
-  final TextEditingController controller;
-
-  final FocusNode focusNode;
-
-  final bool enabled;
-
-  final ValueChanged<String> onChanged;
-
-  final ValueChanged<String> onSubmitted;
-
-  final VoidCallback onBuscar;
-
-  const _CampoCodigo({
-    required this.controller,
-
-    required this.focusNode,
-
-    required this.enabled,
-
-    required this.onChanged,
-
-    required this.onSubmitted,
-
-    required this.onBuscar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 50,
-
-      child: TextField(
-        controller: controller,
-
-        focusNode: focusNode,
-
-        enabled: enabled,
-
-        keyboardType: TextInputType.none,
-
-        showCursor: true,
-
-        textInputAction: TextInputAction.done,
-
-        onChanged: onChanged,
-
-        onSubmitted: onSubmitted,
-
-        decoration: InputDecoration(
-          labelText: 'Código do produto',
-
-          hintText: 'Bipe ou digite o código',
-
-          prefixIcon: const Icon(Icons.qr_code_scanner, size: 20),
-
-          suffixIcon: IconButton(
-            onPressed: enabled ? onBuscar : null,
-
-            icon: const Icon(Icons.search),
-          ),
-
-          border: const OutlineInputBorder(),
-
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-
-            vertical: 7,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-
-// PRODUTO SELECIONADO
-
-// ============================================================
-
-class _ProdutoSelecionado extends StatelessWidget {
-  final String codigo;
-
-  final String descricao;
-
-  const _ProdutoSelecionado({required this.codigo, required this.descricao});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-
-      constraints: const BoxConstraints(minHeight: 52),
-
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(9),
-
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      ),
-
-      child: Row(
-        children: [
-          Icon(
-            Icons.inventory_2_outlined,
-
-            size: 20,
-
-            color: Theme.of(context).colorScheme.primary,
-          ),
-
-          const SizedBox(width: 8),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                const Text(
-                  'PRODUTO',
-
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
-                ),
-
-                Text(
-                  descricao,
-
-                  maxLines: 2,
-
-                  overflow: TextOverflow.ellipsis,
-
-                  style: const TextStyle(
-                    fontSize: 12,
-
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                Text('Cód. $codigo', style: const TextStyle(fontSize: 9)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-
-// ÚLTIMO REGISTRO
-
-// ============================================================
-
-class _UltimoRegistro extends StatelessWidget {
-  final String codigo;
-
-  final String? descricao;
-
-  final int quantidade;
-
-  final OrigemEntrada? origem;
-
-  final ModoContagem? metodo;
-
-  const _UltimoRegistro({
-    required this.codigo,
-
-    required this.descricao,
-
-    required this.quantidade,
-
-    required this.origem,
-
-    required this.metodo,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bipado = origem == OrigemEntrada.bipado;
-
-    return Container(
-      width: double.infinity,
-
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(9),
-
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-
-      child: Row(
-        children: [
-          Icon(
-            bipado ? Icons.qr_code_scanner : Icons.keyboard_alt_outlined,
-
-            size: 18,
-          ),
-
-          const SizedBox(width: 7),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                const Text(
-                  'ÚLTIMO REGISTRO',
-
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
-                ),
-
-                Text(
-                  descricao?.isNotEmpty == true ? descricao! : 'Código $codigo',
-
-                  maxLines: 1,
-
-                  overflow: TextOverflow.ellipsis,
-
-                  style: const TextStyle(
-                    fontSize: 10,
-
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                Text('Cód. $codigo', style: const TextStyle(fontSize: 8)),
-              ],
-            ),
-          ),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                ),
-
-                child: Text(
-                  bipado ? 'BIPADO' : 'DIGITADO',
-
-                  style: const TextStyle(
-                    fontSize: 8,
-
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 2),
-
-              Text(
-                'Qtd. $quantidade',
-
-                style: const TextStyle(
-                  fontSize: 9,
-
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              if (metodo != null)
-                Text(
-                  metodo == ModoContagem.itemAItem
-                      ? 'ITEM A ITEM'
-                      : 'QUANTIDADE',
-
-                  style: const TextStyle(fontSize: 7),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-
-// TECLADO NUMÉRICO
-
-// ============================================================
-
-class _TecladoNumerico extends StatelessWidget {
-  final String titulo;
-
-  final String valor;
-
-  final bool enabled;
-
-  final bool modoQuantidade;
-
-  final ValueChanged<String> onNumero;
-
-  final VoidCallback onApagar;
-
-  final VoidCallback onLimpar;
-
-  final VoidCallback onConfirmar;
-
-  const _TecladoNumerico({
-    required this.titulo,
-
-    required this.valor,
-
-    required this.enabled,
-
-    required this.modoQuantidade,
-
-    required this.onNumero,
-
-    required this.onApagar,
-
-    required this.onLimpar,
-
-    required this.onConfirmar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-
-      child: Column(
-        children: [
-          Container(
-            height: 42,
-
-            width: double.infinity,
-
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
-
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-
-            child: Row(
-              children: [
-                Icon(
-                  modoQuantidade
-                      ? Icons.calculate_outlined
-                      : Icons.keyboard_alt_outlined,
-
-                  size: 18,
-                ),
-
-                const SizedBox(width: 7),
-
-                Text(
-                  titulo,
-
-                  style: const TextStyle(
-                    fontSize: 9,
-
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const Spacer(),
-
-                Flexible(
-                  child: Text(
-                    valor.isEmpty ? '0' : valor,
-
-                    overflow: TextOverflow.ellipsis,
-
-                    style: const TextStyle(
-                      fontSize: 22,
-
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 2),
-
-          Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      _Tecla(
-                        texto: '1',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('1'),
-                      ),
-
-                      _Tecla(
-                        texto: '2',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('2'),
-                      ),
-
-                      _Tecla(
-                        texto: '3',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('3'),
+                      Text(
+                        'Cód. $codigo',
+                        style: const TextStyle(fontSize: 11),
                       ),
                     ],
                   ),
-                ),
-
-                Expanded(
-                  child: Row(
-                    children: [
-                      _Tecla(
-                        texto: '4',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('4'),
-                      ),
-
-                      _Tecla(
-                        texto: '5',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('5'),
-                      ),
-
-                      _Tecla(
-                        texto: '6',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('6'),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Expanded(
-                  child: Row(
-                    children: [
-                      _Tecla(
-                        texto: '7',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('7'),
-                      ),
-
-                      _Tecla(
-                        texto: '8',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('8'),
-                      ),
-
-                      _Tecla(
-                        texto: '9',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('9'),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Expanded(
-                  child: Row(
-                    children: [
-                      _Tecla(texto: 'C', enabled: enabled, onPressed: onLimpar),
-
-                      _Tecla(
-                        texto: '0',
-
-                        enabled: enabled,
-
-                        onPressed: () => onNumero('0'),
-                      ),
-
-                      _Tecla(texto: '⌫', enabled: enabled, onPressed: onApagar),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
-
-          const SizedBox(height: 2),
-
-          SizedBox(
-            width: double.infinity,
-
-            height: 40,
-
-            child: ElevatedButton.icon(
-              onPressed: enabled ? onConfirmar : null,
-
-              icon: Icon(modoQuantidade ? Icons.check : Icons.search, size: 17),
-
-              label: Text(
-                modoQuantidade ? 'CONFIRMAR QUANTIDADE' : 'BUSCAR / REGISTRAR',
-
-                style: const TextStyle(
-                  fontSize: 10,
-
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Tecla extends StatelessWidget {
-  final String texto;
-
-  final bool enabled;
-
-  final VoidCallback onPressed;
-
-  const _Tecla({
-    required this.texto,
-
-    required this.enabled,
-
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-
-        child: SizedBox.expand(
-          child: OutlinedButton(
-            onPressed: enabled ? onPressed : null,
-
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.zero,
-
-              minimumSize: Size.zero,
-
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-
-              shape: RoundedRectangleBorder(
+          if (codigo != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.red.shade700,
                 borderRadius: BorderRadius.circular(8),
               ),
+              child: Text(
+                'Qtd: $quantidade',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-
-            child: Text(
-              texto,
-
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// ============================================================
-
-// FINALIZADA
-
-// ============================================================
-
-class _FinalizadaCompacto extends StatelessWidget {
-  const _FinalizadaCompacto();
-
+class _Ferramentas extends StatelessWidget {
+  final bool quantidade, caixa, enabled;
+  final String volume;
+  final VoidCallback onQuantidade, onCaixa, onVolume, onPesquisa;
+  const _Ferramentas({
+    required this.quantidade,
+    required this.caixa,
+    required this.enabled,
+    required this.volume,
+    required this.onQuantidade,
+    required this.onCaixa,
+    required this.onVolume,
+    required this.onPesquisa,
+  });
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-
-      height: 36,
-
+      margin: const EdgeInsets.fromLTRB(8, 4, 8, 2),
       decoration: BoxDecoration(
+        color: Colors.blue.shade600,
         borderRadius: BorderRadius.circular(8),
-
-        border: Border.all(color: Colors.green),
       ),
-
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-
+      child: Row(
         children: [
-          Icon(Icons.check_circle, color: Colors.green, size: 17),
-
-          SizedBox(width: 6),
-
-          Text(
-            'CONFERÊNCIA FINALIZADA',
-
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          Expanded(
+            child: IconButton(
+              onPressed: enabled ? onQuantidade : null,
+              icon: Icon(
+                Icons.push_pin,
+                color: quantidade ? Colors.white : Colors.lightGreenAccent,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                IconButton(
+                  onPressed: enabled ? onVolume : null,
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+                Positioned(
+                  right: 2,
+                  bottom: 0,
+                  child: Text(
+                    volume,
+                    style: const TextStyle(color: Colors.white, fontSize: 8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: IconButton(
+              onPressed: enabled ? onCaixa : null,
+              icon: Icon(
+                Icons.inventory_2_outlined,
+                color: caixa ? Colors.lightGreenAccent : Colors.white,
+              ),
+            ),
+          ),
+          Expanded(
+            child: IconButton(
+              onPressed: enabled ? onPesquisa : null,
+              icon: const Icon(Icons.search, color: Colors.white),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+class _Teclado extends StatelessWidget {
+  final bool enabled;
+  final ValueChanged<String> numero;
+  final VoidCallback apagar, limpar, confirmar;
+  const _Teclado({
+    required this.enabled,
+    required this.numero,
+    required this.apagar,
+    required this.limpar,
+    required this.confirmar,
+  });
+  @override
+  Widget build(BuildContext context) {
+    const t = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: t.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+          childAspectRatio: 2.15,
+        ),
+        itemBuilder: (context, i) {
+          final k = t[i];
+          return ElevatedButton(
+            onPressed: !enabled
+                ? null
+                : k == 'C'
+                ? limpar
+                : k == '⌫'
+                ? apagar
+                : () => numero(k),
+            child: Text(
+              k,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _NumeroDialog extends StatefulWidget {
+  final String titulo, hint, confirmarTexto;
+  final TextEditingController controller;
+  final VoidCallback cancelar, confirmar;
+  const _NumeroDialog({
+    required this.titulo,
+    required this.hint,
+    required this.controller,
+    required this.confirmarTexto,
+    required this.cancelar,
+    required this.confirmar,
+  });
+  @override
+  State<_NumeroDialog> createState() => _NumeroDialogState();
+}
+
+class _NumeroDialogState extends State<_NumeroDialog> {
+  void n(String x) {
+    widget.controller.text += x;
+    setState(() {});
+  }
+
+  void back() {
+    if (widget.controller.text.isNotEmpty) {
+      widget.controller.text = widget.controller.text.substring(
+        0,
+        widget.controller.text.length - 1,
+      );
+      setState(() {});
+    }
+  }
+
+  void clear() {
+    widget.controller.clear();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.titulo),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: widget.controller,
+          readOnly: true,
+          keyboardType: TextInputType.none,
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            border: const OutlineInputBorder(),
+          ),
+          style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        _DialogKeyboard(
+          numero: n,
+          apagar: back,
+          limpar: clear,
+          confirmar: widget.confirmar,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(onPressed: widget.cancelar, child: const Text('CANCELAR')),
+      ElevatedButton(
+        onPressed: widget.confirmar,
+        child: Text(widget.confirmarTexto),
+      ),
+    ],
+  );
+}
+
+class _QuantidadeDialog extends StatefulWidget {
+  final String codigo;
+  final bool caixas;
+  final TextEditingController controller;
+  final VoidCallback cancelar, gravar;
+  const _QuantidadeDialog({
+    required this.codigo,
+    required this.caixas,
+    required this.controller,
+    required this.cancelar,
+    required this.gravar,
+  });
+  @override
+  State<_QuantidadeDialog> createState() => _QuantidadeDialogState();
+}
+
+class _QuantidadeDialogState extends State<_QuantidadeDialog> {
+  void n(String x) {
+    widget.controller.text += x;
+    setState(() {});
+  }
+
+  void back() {
+    if (widget.controller.text.isNotEmpty) {
+      widget.controller.text = widget.controller.text.substring(
+        0,
+        widget.controller.text.length - 1,
+      );
+      setState(() {});
+    }
+  }
+
+  void clear() {
+    widget.controller.clear();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.caixas ? 'Quantidade de caixas' : 'Quantidade'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Código: ${widget.codigo}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: widget.controller,
+          readOnly: true,
+          keyboardType: TextInputType.none,
+          textAlign: TextAlign.center,
+          decoration: const InputDecoration(
+            hintText: 'Quantidade',
+            border: OutlineInputBorder(),
+          ),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        _DialogKeyboard(
+          numero: n,
+          apagar: back,
+          limpar: clear,
+          confirmar: widget.gravar,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(onPressed: widget.cancelar, child: const Text('CANCELAR')),
+      ElevatedButton(onPressed: widget.gravar, child: const Text('GRAVAR')),
+    ],
+  );
+}
+
+class _DialogKeyboard extends StatelessWidget {
+  final ValueChanged<String> numero;
+  final VoidCallback apagar, limpar, confirmar;
+  const _DialogKeyboard({
+    required this.numero,
+    required this.apagar,
+    required this.limpar,
+    required this.confirmar,
+  });
+  @override
+  Widget build(BuildContext context) {
+    const t = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: t.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 5,
+        mainAxisSpacing: 5,
+        childAspectRatio: 1.7,
+      ),
+      itemBuilder: (context, i) {
+        final k = t[i];
+        return ElevatedButton(
+          onPressed: k == 'C'
+              ? limpar
+              : k == '⌫'
+              ? apagar
+              : () => numero(k),
+          child: Text(
+            k,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class ManutencaoContagemPage extends StatefulWidget {
+  final Map<String, dynamic> item;
+  final int conferenciaId, usuarioId;
+  const ManutencaoContagemPage({
+    super.key,
+    required this.item,
+    required this.conferenciaId,
+    required this.usuarioId,
+  });
+  @override
+  State<ManutencaoContagemPage> createState() => _ManutencaoContagemPageState();
+}
+
+class _ManutencaoContagemPageState extends State<ManutencaoContagemPage> {
+  final service = ContagemLocalService();
+  int _int(dynamic v) =>
+      v is num ? v.toInt() : int.tryParse(v?.toString() ?? '') ?? 0;
+  Future<void> _corrigir() async {
+    final n = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CorrecaoContagemPage(item: widget.item),
+      ),
+    );
+    if (n == null || !mounted) return;
+    try {
+      await service.corrigirContagem(
+        conferenciaId: widget.conferenciaId,
+        itemId: _int(widget.item['id']),
+        novaQuantidade: n,
+        usuarioId: widget.usuarioId,
+        motivo: 'Correção manual pelo conferente.',
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+    }
+  }
+
+  Future<void> _zerar() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Zerar contagem'),
+        content: Text('Deseja zerar ${widget.item['codigo']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ZERAR'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await service.corrigirContagem(
+        conferenciaId: widget.conferenciaId,
+        itemId: _int(widget.item['id']),
+        novaQuantidade: 0,
+        usuarioId: widget.usuarioId,
+        motivo: 'Exclusão da contagem pelo conferente.',
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Manutenção'),
+      actions: [
+        IconButton(onPressed: _corrigir, icon: const Icon(Icons.edit)),
+        IconButton(onPressed: _zerar, icon: const Icon(Icons.delete_outline)),
+      ],
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.item['descricao']?.toString() ?? 'Produto',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text('Código: ${widget.item['codigo']}'),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            color: Colors.amber.shade100,
+            child: Text(
+              'Itens registrados: ${_int(widget.item['quantidade_contada'])}',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class CorrecaoContagemPage extends StatefulWidget {
+  final Map<String, dynamic> item;
+  const CorrecaoContagemPage({super.key, required this.item});
+  @override
+  State<CorrecaoContagemPage> createState() => _CorrecaoContagemPageState();
+}
+
+class _CorrecaoContagemPageState extends State<CorrecaoContagemPage> {
+  final c = TextEditingController();
+  @override
+  void dispose() {
+    c.dispose();
+    super.dispose();
+  }
+
+  void n(String x) {
+    c.text += x;
+    setState(() {});
+  }
+
+  void back() {
+    if (c.text.isNotEmpty) {
+      c.text = c.text.substring(0, c.text.length - 1);
+      setState(() {});
+    }
+  }
+
+  void clear() {
+    c.clear();
+    setState(() {});
+  }
+
+  void gravar() {
+    final n = int.tryParse(c.text);
+    if (n != null && n >= 0) Navigator.pop(context, n);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.red.shade50,
+    appBar: AppBar(
+      backgroundColor: Colors.red.shade700,
+      foregroundColor: Colors.white,
+      title: const Text('Correção de contagem'),
+    ),
+    body: SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Text(
+                  widget.item['descricao']?.toString() ?? 'Produto',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text('Código: ${widget.item['codigo']}'),
+                const SizedBox(height: 10),
+                Text(
+                  'Itens registrados: ${widget.item['quantidade_contada']}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: c,
+                  readOnly: true,
+                  keyboardType: TextInputType.none,
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    hintText: 'Nova quantidade...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _DialogKeyboard(
+              numero: n,
+              apagar: back,
+              limpar: clear,
+              confirmar: gravar,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: gravar,
+                child: const Text('GRAVAR'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

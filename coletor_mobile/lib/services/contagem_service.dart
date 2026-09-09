@@ -15,7 +15,7 @@ class ProdutoNaoEncontradoException implements Exception {
 }
 
 class ContagemService {
-  static const String baseUrl = 'http://192.168.3.41:8000';
+  static const String baseUrl = 'http://192.168.1.205:8000';
 
   final AuthService authService = AuthService();
 

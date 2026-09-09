@@ -9,7 +9,8 @@ from app.models.divergencia import Divergencia
 from app.models.contagem_historico import ContagemHistorico
 from app.models.conferencia_historico import ConferenciaHistorico
 from app.routes import usuario
-
+from app.routes import sincronizacao
+from app.routes import produtos
 
 from app.routes import (
     contagens,
@@ -58,7 +59,8 @@ app.include_router(conferencia.router)
 app.include_router(auth.router)
 app.include_router(divergencias.router)
 app.include_router(usuario.router)
-
+app.include_router(sincronizacao.router)
+app.include_router(produtos.router)
 @app.get("/")
 def home():
     return {"ok": True}

@@ -1,13 +1,9 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
-
 from jose import jwt, JWTError
-
 from app.database.connection import SessionLocal
 from app.models.usuario import Usuario
 from app.core.security import SECRET_KEY, ALGORITHM, security
-
-
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
