@@ -67,6 +67,35 @@ export async function criarConferencia(token: string) {
   return data;
 }
 
+export async function importarXml(
+  token: string,
+  conferenciaId: number,
+  arquivo: File,
+) {
+  const formData = new FormData();
+
+  formData.append("conferencia_id", String(conferenciaId));
+  formData.append("file", arquivo);
+
+  const response = await fetch(`${API_URL}/notas/importar-xml`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.detail || `Erro ao importar XML: ${response.status}`,
+    );
+  }
+
+  return data;
+}
+
 export async function buscarConferencias(token: string) {
   const response = await fetch(`${API_URL}/conferencias`, {
     method: "GET",

@@ -37,6 +37,22 @@ class ResultadoContagem {
 class ContagemLocalService {
   final AppDatabase _database = AppDatabase.instance;
 
+  String normalizarCodigo(String codigo) {
+    final valor = codigo.trim();
+
+    // EAN-13 do padrão utilizado no cadastro:
+    // 7891033 + código interno de 5 dígitos + dígito verificador
+    //
+    // Exemplo:
+    // 7891033565306 → 56530
+    if (RegExp(r'^\d{13}$').hasMatch(valor) && valor.startsWith('7891033')) {
+      return valor.substring(7, 12);
+    }
+
+    // Código interno já está no formato correto.
+    return valor;
+  }
+
   int _int(dynamic value) {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
@@ -75,7 +91,7 @@ class ContagemLocalService {
     required TipoContagem tipoContagem,
     String origem = 'QUANTIDADE_INFORMADA',
   }) async {
-    final codigoNormalizado = codigo.trim();
+    final codigoNormalizado = normalizarCodigo(codigo);
 
     if (codigoNormalizado.isEmpty) {
       throw Exception('Código do produto não informado.');

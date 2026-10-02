@@ -1,14 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0c1014;
-  --foreground: #f5f5f5;
-  --surface: #12181d;
-  --surface-hover: #182027;
-  --border: #2b3036;
-  --primary: #03423a;
-  --primary-light: #075a4e;
-  --text-secondary: #b8bec5;
+  --background: #f6f7f5;
+  --foreground: #17231d;
+  --surface: #ffffff;
+  --surface-hover: #f6f7f5;
+  --border: #dce4df;
+  --primary: #0b3d2e;
+  --primary-light: #176b4d;
+  --accent: #e87524;
+  --warning: #d99000;
+  --success: #1db954;
+  --danger: #d64545;
+  --info: #3578b8;
+  --text-primary: #17231d;
+  --text-secondary: #64736b;
 }
 
 * {
@@ -29,24 +35,41 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
-::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
-  background: #0c1014;
+*::-webkit-scrollbar-track {
+  background: #f6f7f5;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #2b3036;
+*::-webkit-scrollbar-thumb {
+  background: #0b3d2e;
   border-radius: 8px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3a4148;
+*::-webkit-scrollbar-thumb:hover {
+  background: #176b4d;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #17231d;
+  caret-color: #17231d;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+::selection {
+  background: rgba(23, 107, 77, 0.25);
+  color: #17231d;
 }
