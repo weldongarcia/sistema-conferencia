@@ -119,11 +119,11 @@ export default function AuditorDashboardPage() {
 
   if (carregando) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] text-[#17231D]">
+      <main className="flex min-h-screen items-center justify-center bg-canvas text-ink">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[#DCE4DF] border-t-[#176B4D]" />
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand-light" />
 
-          <p className="text-sm text-[#64736B]">
+          <p className="text-sm text-muted">
             Carregando painel de auditoria...
           </p>
         </div>
@@ -193,31 +193,31 @@ export default function AuditorDashboardPage() {
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
             <div>
               <div className="mb-2 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#3578B8]" />
+                <span className="h-2 w-2 rounded-full bg-info" />
 
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3578B8]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-info">
                   Auditoria
                 </p>
               </div>
 
-              <h1 className="text-3xl font-bold tracking-tight text-[#0B3D2E] sm:text-4xl">
+              <h1 className="text-3xl font-bold tracking-tight text-brand sm:text-4xl">
                 Painel de Auditoria
               </h1>
 
-              <p className="mt-2 text-sm text-[#64736B]">
+              <p className="mt-2 text-sm text-muted">
                 Visualização e acompanhamento das conferências do grupo.
               </p>
             </div>
 
-            <div className="rounded-xl border border-[#DCE4DF] bg-white px-5 py-3 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#64736B]">
+            <div className="rounded-xl border border-line bg-white px-5 py-3 shadow-card">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
                 Acesso
               </p>
 
               <div className="mt-1 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#3578B8]" />
+                <span className="h-2 w-2 rounded-full bg-info" />
 
-                <p className="text-sm font-semibold text-[#0B3D2E]">Auditor</p>
+                <p className="text-sm font-semibold text-brand">Auditor</p>
               </div>
             </div>
           </div>
@@ -228,18 +228,18 @@ export default function AuditorDashboardPage() {
         ===================================================== */}
 
         {erro && (
-          <div className="mb-6 rounded-xl border border-[#D64545]/30 bg-[#FFF5F5] p-5">
+          <div className="mb-6 rounded-xl border border-danger/30 bg-danger-soft p-5">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#D64545]">
+              <div className="mt-0.5 text-danger">
                 <AlertIcon />
               </div>
 
               <div>
-                <p className="font-semibold text-[#D64545]">
+                <p className="font-semibold text-danger">
                   Erro ao carregar o painel
                 </p>
 
-                <p className="mt-1 text-sm text-[#D64545]">{erro}</p>
+                <p className="mt-1 text-sm text-danger">{erro}</p>
               </div>
             </div>
           </div>
@@ -303,21 +303,21 @@ export default function AuditorDashboardPage() {
                 LISTA
             =================================================== */}
 
-            <section className="mt-8 overflow-hidden rounded-2xl border border-[#DCE4DF] bg-white shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
+            <section className="mt-8 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
               {/* Cabeçalho */}
 
-              <div className="flex flex-col justify-between gap-3 border-b border-[#DCE4DF] px-6 py-5 sm:flex-row sm:items-center">
+              <div className="flex flex-col justify-between gap-3 border-b border-line px-6 py-5 sm:flex-row sm:items-center">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#0B3D2E]">
+                  <h2 className="text-lg font-semibold text-brand">
                     Todas as conferências
                   </h2>
 
-                  <p className="mt-1 text-xs text-[#64736B]">
+                  <p className="mt-1 text-xs text-muted">
                     O auditor possui acesso às conferências de todas as lojas.
                   </p>
                 </div>
 
-                <span className="rounded-lg border border-[#DCE4DF] bg-[#F6F7F5] px-3 py-1.5 text-xs font-semibold text-[#17231D]">
+                <span className="rounded-lg border border-line bg-canvas px-3 py-1.5 text-xs font-semibold text-ink">
                   {total} registro(s)
                 </span>
               </div>
@@ -326,60 +326,60 @@ export default function AuditorDashboardPage() {
 
               {conferencias.length === 0 ? (
                 <div className="px-6 py-16 text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-canvas text-muted">
                     <ClipboardIcon />
                   </div>
 
-                  <p className="font-medium text-[#17231D]">
+                  <p className="font-medium text-ink">
                     Nenhuma conferência encontrada
                   </p>
 
-                  <p className="mx-auto mt-2 max-w-md text-sm text-[#64736B]">
+                  <p className="mx-auto mt-2 max-w-md text-sm text-muted">
                     Ainda não existem conferências cadastradas.
                   </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[900px] text-left text-sm">
-                    <thead className="border-b border-[#DCE4DF] bg-[#F6F7F5]">
+                    <thead className="border-b border-line bg-canvas">
                       <tr>
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           ID
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Loja
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Usuário
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Status
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Data de início
                         </th>
 
-                        <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Ação
                         </th>
                       </tr>
                     </thead>
 
-                    <tbody className="divide-y divide-[#DCE4DF]">
+                    <tbody className="divide-y divide-line">
                       {conferencias.map((conferencia) => (
                         <tr
                           key={conferencia.id}
                           onClick={() => abrirConferencia(conferencia.id)}
-                          className="group cursor-pointer transition hover:bg-[#F6F7F5]"
+                          className="group cursor-pointer transition hover:bg-canvas"
                         >
                           {/* ID */}
 
                           <td className="px-6 py-4">
-                            <span className="font-semibold text-[#0B3D2E]">
+                            <span className="font-semibold text-brand">
                               #{conferencia.id}
                             </span>
                           </td>
@@ -387,14 +387,14 @@ export default function AuditorDashboardPage() {
                           {/* LOJA */}
 
                           <td className="px-6 py-4">
-                            <span className="font-medium text-[#17231D]">
+                            <span className="font-medium text-ink">
                               {conferencia.estabelecimento_id}
                             </span>
                           </td>
 
                           {/* USUÁRIO */}
 
-                          <td className="px-6 py-4 text-[#64736B]">
+                          <td className="px-6 py-4 text-muted">
                             #{conferencia.usuario_id}
                           </td>
 
@@ -406,7 +406,7 @@ export default function AuditorDashboardPage() {
 
                           {/* DATA */}
 
-                          <td className="px-6 py-4 text-[#64736B]">
+                          <td className="px-6 py-4 text-muted">
                             {formatarData(conferencia.data_inicio)}
                           </td>
 
@@ -419,7 +419,7 @@ export default function AuditorDashboardPage() {
 
                                 abrirConferencia(conferencia.id);
                               }}
-                              className="inline-flex items-center gap-2 rounded-lg border border-[#DCE4DF] px-3 py-2 text-xs font-semibold text-[#0B3D2E] transition hover:border-[#176B4D] hover:bg-[#F6F7F5]"
+                              className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand transition hover:border-brand-light hover:bg-canvas"
                             >
                               Abrir
                               <ArrowIcon />
@@ -456,39 +456,39 @@ function StatCard({
 }) {
   const estilos = {
     default: {
-      borda: "border-[#DCE4DF]",
-      indicador: "bg-[#64736B]",
-      numero: "text-[#17231D]",
+      borda: "border-line",
+      indicador: "bg-muted",
+      numero: "text-ink",
     },
 
     warning: {
-      borda: "border-[#D99000]/35",
-      indicador: "bg-[#D99000]",
-      numero: "text-[#D99000]",
+      borda: "border-warning/35",
+      indicador: "bg-warning",
+      numero: "text-warning",
     },
 
     orange: {
-      borda: "border-[#E87524]/35",
-      indicador: "bg-[#E87524]",
-      numero: "text-[#E87524]",
+      borda: "border-attention/35",
+      indicador: "bg-attention",
+      numero: "text-attention",
     },
 
     success: {
-      borda: "border-[#1DB954]/35",
-      indicador: "bg-[#1DB954]",
-      numero: "text-[#1DB954]",
+      borda: "border-success/35",
+      indicador: "bg-success",
+      numero: "text-success",
     },
 
     danger: {
-      borda: "border-[#D64545]/35",
-      indicador: "bg-[#D64545]",
-      numero: "text-[#D64545]",
+      borda: "border-danger/35",
+      indicador: "bg-danger",
+      numero: "text-danger",
     },
 
     info: {
-      borda: "border-[#3578B8]/35",
-      indicador: "bg-[#3578B8]",
-      numero: "text-[#3578B8]",
+      borda: "border-info/35",
+      indicador: "bg-info",
+      numero: "text-info",
     },
   };
 
@@ -498,14 +498,14 @@ function StatCard({
     <div
       className={[
         "rounded-2xl border bg-white p-5",
-        "shadow-[0_1px_2px_rgba(23,35,29,0.04)]",
+        "shadow-card",
         "transition duration-200",
         "hover:-translate-y-0.5 hover:shadow-md",
         estilo.borda,
       ].join(" ")}
     >
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
           {titulo}
         </p>
 
@@ -516,7 +516,7 @@ function StatCard({
         {valor}
       </p>
 
-      <p className="mt-2 text-xs text-[#64736B]">{descricao}</p>
+      <p className="mt-2 text-xs text-muted">{descricao}</p>
     </div>
   );
 }
@@ -528,38 +528,38 @@ function StatCard({
 function StatusBadge({ status }: { status: string }) {
   const normalizado = status.toUpperCase();
 
-  let classes = "border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]";
+  let classes = "border-line bg-canvas text-muted";
 
-  let indicador = "bg-[#64736B]";
+  let indicador = "bg-muted";
 
   if (normalizado === "RASCUNHO") {
-    classes = "border-[#D99000]/30 bg-[#FFF8E8] text-[#A86F00]";
+    classes = "border-warning/30 bg-warning-soft text-warning-strong";
 
-    indicador = "bg-[#D99000]";
+    indicador = "bg-warning";
   }
 
   if (normalizado === "REABERTA") {
-    classes = "border-[#E87524]/30 bg-[#FFF3EA] text-[#C95F16]";
+    classes = "border-attention/30 bg-attention-soft text-attention-strong";
 
-    indicador = "bg-[#E87524]";
+    indicador = "bg-attention";
   }
 
   if (normalizado === "FINALIZADA") {
-    classes = "border-[#3578B8]/30 bg-[#EEF5FB] text-[#3578B8]";
+    classes = "border-info/30 bg-info-soft text-info";
 
-    indicador = "bg-[#3578B8]";
+    indicador = "bg-info";
   }
 
   if (normalizado === "APROVADA") {
-    classes = "border-[#1DB954]/30 bg-[#EFFAF3] text-[#168C40]";
+    classes = "border-success/30 bg-success-soft text-success-strong";
 
-    indicador = "bg-[#1DB954]";
+    indicador = "bg-success";
   }
 
   if (normalizado === "REPROVADA") {
-    classes = "border-[#D64545]/30 bg-[#FFF5F5] text-[#D64545]";
+    classes = "border-danger/30 bg-danger-soft text-danger";
 
-    indicador = "bg-[#D64545]";
+    indicador = "bg-danger";
   }
 
   return (
