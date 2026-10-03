@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CircleAlert, LayoutGrid, ShieldCheck } from "lucide-react";
 
 import AppShell from "../../../components/layout/AppShell";
+import EmptyState from "../../../components/ui/EmptyState";
 import StatusBadge from "../../../components/ui/StatusBadge";
 
 import { buscarConferencias, buscarUsuarioAtual } from "../../../services/api";
@@ -328,17 +329,11 @@ export default function AuditorDashboardPage() {
 
               {conferencias.length === 0 ? (
                 <div className="px-6 py-16 text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-canvas text-muted">
-                    <ClipboardIcon />
-                  </div>
-
-                  <p className="font-medium text-ink">
-                    Nenhuma conferência encontrada
-                  </p>
-
-                  <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-                    Ainda não existem conferências cadastradas.
-                  </p>
+                  <EmptyState
+                    icone={<ClipboardIcon />}
+                    titulo="Nenhuma conferência encontrada"
+                    descricao="Ainda não existem conferências cadastradas."
+                  />
                 </div>
               ) : (
                 <div className="overflow-x-auto">

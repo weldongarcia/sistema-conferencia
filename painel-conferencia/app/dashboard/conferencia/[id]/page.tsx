@@ -17,6 +17,7 @@ import {
 } from "../../../../services/api";
 
 import AppShell from "../../../../components/layout/AppShell";
+import EmptyState from "../../../../components/ui/EmptyState";
 import { estiloStatus } from "../../../../components/ui/StatusBadge";
 
 type Usuario = {
@@ -1108,30 +1109,23 @@ export default function ConferenciaDetalhePage() {
                   {itensFiltrados.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-16 text-center">
-                        <div className="mx-auto flex max-w-md flex-col items-center">
-                          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-canvas text-muted">
-                            <Search size={17} strokeWidth={1.8} />
-                          </div>
-
-                          <p className="font-medium text-ink">
-                            Nenhum item encontrado
-                          </p>
-
-                          <p className="mt-2 text-sm text-muted">
-                            Tente alterar a busca ou o filtro selecionado.
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setBuscaItens("");
-                              setFiltroItens("TODOS");
-                            }}
-                            className="mt-4 rounded-lg border border-line px-4 py-2 text-xs font-semibold text-brand transition hover:border-brand-light hover:bg-canvas"
-                          >
-                            Limpar filtros
-                          </button>
-                        </div>
+                        <EmptyState
+                          icone={<Search size={17} strokeWidth={1.8} />}
+                          titulo="Nenhum item encontrado"
+                          descricao="Tente alterar a busca ou o filtro selecionado."
+                          acao={
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBuscaItens("");
+                                setFiltroItens("TODOS");
+                              }}
+                              className="mt-4 rounded-lg border border-line px-4 py-2 text-xs font-semibold text-brand transition hover:border-brand-light hover:bg-canvas"
+                            >
+                              Limpar filtros
+                            </button>
+                          }
+                        />
                       </td>
                     </tr>
                   ) : (
