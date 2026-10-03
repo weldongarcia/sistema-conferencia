@@ -1184,9 +1184,7 @@ export default function ConferenciaDetalhePage() {
                                     : "bg-[#EFFAF3] text-[#168C40]",
                               ].join(" ")}
                             >
-                              {item.diferenca > 0
-                                ? `+${item.diferenca}`
-                                : item.diferenca}
+                              {item.xml}
                             </span>
                           </td>
 
