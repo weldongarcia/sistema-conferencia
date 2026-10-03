@@ -33,8 +33,6 @@ export default function LoginPage() {
     try {
       const data = await login(usuario.trim(), senha);
 
-      console.log("LOGIN REALIZADO:", data);
-
       const token = data?.access_token ?? data?.token ?? data?.accessToken;
 
       if (!token) {
