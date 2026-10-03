@@ -1,8 +1,49 @@
 @import "tailwindcss";
 
+@theme {
+  --color-canvas: #F6F7F5;
+  --color-surface: #FFFFFF;
+  --color-ink: #17231D;
+  --color-muted: #64736B;
+  --color-line: #DCE4DF;
+  --color-track: #E7ECE9;
+  --color-brand: #0B3D2E;
+  --color-brand-light: #176B4D;
+
+  --color-sidebar-text: #C6DDD2;
+  --color-sidebar-icon: #B8D8C8;
+  --color-sidebar-label: #8FB5A4;
+
+  --color-success: #1DB954;
+  --color-success-strong: #168C40;
+  --color-success-hover: #18A64A;
+  --color-success-soft: #EFFAF3;
+
+  --color-danger: #D64545;
+  --color-danger-hover: #B93434;
+  --color-danger-soft: #FFF5F5;
+
+  --color-warning: #D99000;
+  --color-warning-strong: #A86F00;
+  --color-warning-soft: #FFF8E8;
+  --color-warning-soft-hover: #FCEFCB;
+
+  --color-attention: #E87524;
+  --color-attention-strong: #C95F16;
+  --color-attention-soft: #FFF3EA;
+  --color-attention-soft-hover: #FDE7D8;
+
+  --color-info: #3578B8;
+  --color-info-hover: #2B6398;
+  --color-info-soft: #EEF5FB;
+
+  --shadow-card: 0 1px 2px rgba(23,35,29,0.04);
+  --shadow-button: 0 1px 2px rgba(23,35,29,0.12);
+}
+
 :root {
-  --background: #f6f7f5;
-  --foreground: #17231d;
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
   --surface: #ffffff;
   --surface-hover: #f6f7f5;
   --border: #dce4df;
