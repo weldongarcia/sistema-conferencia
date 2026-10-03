@@ -461,33 +461,33 @@ export default function ConferenciaDetalhePage() {
     const normalizado = status.toUpperCase();
 
     if (normalizado === "APROVADA") {
-      return "border border-[#1DB954]/30 bg-[#EFFAF3] text-[#168C40]";
+      return "border border-success/30 bg-success-soft text-success-strong";
     }
 
     if (normalizado === "FINALIZADA") {
-      return "border border-[#3578B8]/30 bg-[#EEF5FB] text-[#3578B8]";
+      return "border border-info/30 bg-info-soft text-info";
     }
 
     if (normalizado === "REABERTA") {
-      return "border border-[#E87524]/30 bg-[#FFF3EA] text-[#C95F16]";
+      return "border border-attention/30 bg-attention-soft text-attention-strong";
     }
 
     if (normalizado === "RASCUNHO") {
-      return "border border-[#D99000]/30 bg-[#FFF8E8] text-[#A86F00]";
+      return "border border-warning/30 bg-warning-soft text-warning-strong";
     }
 
     if (normalizado === "REPROVADA") {
-      return "border border-[#D64545]/30 bg-[#FFF5F5] text-[#D64545]";
+      return "border border-danger/30 bg-danger-soft text-danger";
     }
 
-    return "border border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]";
+    return "border border-line bg-canvas text-muted";
   }
 
   if (carregando) {
     return (
-      <main className="min-h-screen bg-[#F6F7F5] text-[#17231D]">
+      <main className="min-h-screen bg-canvas text-ink">
         <div className="flex min-h-screen items-center justify-center">
-          <p className="text-[#64736B]">Carregando conferência...</p>
+          <p className="text-muted">Carregando conferência...</p>
         </div>
       </main>
     );
@@ -495,20 +495,20 @@ export default function ConferenciaDetalhePage() {
 
   if (erro || !dados) {
     return (
-      <main className="min-h-screen bg-[#F6F7F5] text-[#17231D]">
+      <main className="min-h-screen bg-canvas text-ink">
         <div className="mx-auto max-w-3xl px-6 py-12">
-          <div className="rounded-2xl border border-[#D64545]/30 bg-white p-6 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
-            <h1 className="text-lg font-semibold text-[#D64545]">
+          <div className="rounded-2xl border border-danger/30 bg-white p-6 shadow-card">
+            <h1 className="text-lg font-semibold text-danger">
               Não foi possível carregar a conferência
             </h1>
 
-            <p className="mt-2 text-sm text-[#D64545]">
+            <p className="mt-2 text-sm text-danger">
               {erro || "Nenhum dado encontrado."}
             </p>
 
             <button
               onClick={voltar}
-              className="mt-5 rounded-xl bg-[#0B3D2E] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#176B4D]"
+              className="mt-5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-light"
             >
               Voltar
             </button>
@@ -636,14 +636,14 @@ export default function ConferenciaDetalhePage() {
             <div>
               <button
                 onClick={voltar}
-                className="mb-3 inline-flex items-center gap-2 text-xs font-medium text-[#64736B] transition hover:text-[#0B3D2E]"
+                className="mb-3 inline-flex items-center gap-2 text-xs font-medium text-muted transition hover:text-brand"
               >
                 <span>←</span>
                 Voltar para conferências
               </button>
 
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-[#0B3D2E] sm:text-3xl">
+                <h1 className="text-2xl font-bold tracking-tight text-brand sm:text-3xl">
                   Conferência #{conferenciaId}
                 </h1>
 
@@ -657,17 +657,17 @@ export default function ConferenciaDetalhePage() {
                 </span>
               </div>
 
-              <p className="mt-2 text-sm text-[#64736B]">
+              <p className="mt-2 text-sm text-muted">
                 Versão {dados.versao} • {dados.total_itens} itens
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#DCE4DF] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#64736B]">
+            <div className="rounded-2xl border border-line bg-white px-4 py-3 shadow-card">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">
                 Perfil atual
               </p>
 
-              <p className="mt-1 text-sm font-semibold text-[#0B3D2E]">
+              <p className="mt-1 text-sm font-semibold text-brand">
                 {usuario?.perfil || "-"}
               </p>
             </div>
@@ -679,12 +679,12 @@ export default function ConferenciaDetalhePage() {
 ==================================================== */}
 
         {ehAuditor && statusAtual === "FINALIZADA" && (
-          <div className="mb-6 rounded-2xl border border-[#3578B8]/30 bg-[#EEF5FB] p-5">
-            <p className="font-semibold text-[#3578B8]">
+          <div className="mb-6 rounded-2xl border border-info/30 bg-info-soft p-5">
+            <p className="font-semibold text-info">
               Conferência aguardando auditoria
             </p>
 
-            <p className="mt-1 text-sm text-[#3578B8]">
+            <p className="mt-1 text-sm text-info">
               Revise os itens, divergências e justificativas antes de aprovar ou
               reprovar.
             </p>
@@ -694,20 +694,20 @@ export default function ConferenciaDetalhePage() {
         {ehAuditor &&
           statusAtual === "FINALIZADA" &&
           divergenciasPendentes > 0 && (
-            <div className="mb-6 rounded-2xl border border-[#D99000]/30 bg-[#FFF8E8] p-5">
+            <div className="mb-6 rounded-2xl border border-warning/30 bg-warning-soft p-5">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D99000]/15 text-xs font-bold text-[#A86F00]">
+                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/15 text-xs font-bold text-warning-strong">
                   !
                 </div>
 
                 <div>
-                  <p className="font-semibold text-[#A86F00]">
+                  <p className="font-semibold text-warning-strong">
                     Auditoria aguardando justificativas
                   </p>
 
-                  <p className="mt-1 text-sm leading-6 text-[#A86F00]">
+                  <p className="mt-1 text-sm leading-6 text-warning-strong">
                     Existem{" "}
-                    <strong className="font-semibold text-[#A86F00]">
+                    <strong className="font-semibold text-warning-strong">
                       {divergenciasPendentes}
                     </strong>{" "}
                     divergência(s) sem justificativa. A aprovação ficará
@@ -724,10 +724,10 @@ export default function ConferenciaDetalhePage() {
         ==================================================== */}
 
         {statusAtual === "REABERTA" && (
-          <div className="mb-6 rounded-2xl border border-[#E87524]/30 bg-[#FFF3EA] p-5">
-            <p className="font-semibold text-[#C95F16]">Conferência reaberta</p>
+          <div className="mb-6 rounded-2xl border border-attention/30 bg-attention-soft p-5">
+            <p className="font-semibold text-attention-strong">Conferência reaberta</p>
 
-            <p className="mt-1 text-sm text-[#C95F16]">
+            <p className="mt-1 text-sm text-attention-strong">
               Esta é a versão {dados.versao}. As divergências desta versão
               precisam ser justificadas antes do fechamento.
             </p>
@@ -738,14 +738,14 @@ export default function ConferenciaDetalhePage() {
             AÇÕES
         ==================================================== */}
 
-        <div className="mb-6 rounded-2xl border border-[#DCE4DF] bg-white p-5 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
+        <div className="mb-6 rounded-2xl border border-line bg-white p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-[#0B3D2E]">
+              <p className="text-sm font-semibold text-brand">
                 Ações da conferência
               </p>
 
-              <p className="mt-1 text-xs text-[#64736B]">
+              <p className="mt-1 text-xs text-muted">
                 As ações disponíveis dependem do perfil e do status.
               </p>
             </div>
@@ -754,7 +754,7 @@ export default function ConferenciaDetalhePage() {
               {podeImportarXml && (
                 <label
                   className={[
-                    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#DCE4DF] bg-white px-5 py-2.5 text-sm font-semibold text-[#0B3D2E] transition hover:border-[#176B4D] hover:bg-[#F6F7F5]",
+                    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 py-2.5 text-sm font-semibold text-brand transition hover:border-brand-light hover:bg-canvas",
                     importandoXml ? "pointer-events-none opacity-50" : "",
                   ].join(" ")}
                 >
@@ -783,7 +783,7 @@ export default function ConferenciaDetalhePage() {
                 <button
                   onClick={fechar}
                   disabled={fechando}
-                  className="rounded-xl bg-[#1DB954] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#18A64A] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-success-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {fechando ? "Fechando..." : "Finalizar"}
                 </button>
@@ -801,8 +801,8 @@ export default function ConferenciaDetalhePage() {
                   className={[
                     "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
                     divergenciasPendentes > 0
-                      ? "cursor-not-allowed border border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]"
-                      : "bg-[#3578B8] text-white hover:bg-[#2B6398]",
+                      ? "cursor-not-allowed border border-line bg-canvas text-muted"
+                      : "bg-info text-white hover:bg-info-hover",
                     "disabled:cursor-not-allowed disabled:opacity-60",
                   ].join(" ")}
                 >
@@ -818,7 +818,7 @@ export default function ConferenciaDetalhePage() {
                 <button
                   onClick={reprovar}
                   disabled={processandoAuditoria}
-                  className="rounded-xl bg-[#D64545] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#B93434] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-danger-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {processandoAuditoria ? "Processando..." : "Reprovar"}
                 </button>
@@ -831,7 +831,7 @@ export default function ConferenciaDetalhePage() {
                     setAbrirReabertura(true);
                   }}
                   disabled={processandoAuditoria}
-                  className="rounded-xl border border-[#E87524]/40 bg-[#FFF3EA] px-5 py-2.5 text-sm font-semibold text-[#C95F16] transition hover:bg-[#FDE7D8] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl border border-attention/40 bg-attention-soft px-5 py-2.5 text-sm font-semibold text-attention-strong transition hover:bg-attention-soft-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Reabrir
                 </button>
@@ -840,24 +840,24 @@ export default function ConferenciaDetalhePage() {
           </div>
 
           {erroFechamento && (
-            <div className="mt-4 rounded-xl border border-[#D64545]/30 bg-[#FFF5F5] p-4 text-sm text-[#D64545]">
+            <div className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger">
               {erroFechamento}
             </div>
           )}
 
           {erroImportacaoXml && (
-            <div className="mt-4 rounded-xl border border-[#D64545]/30 bg-[#FFF5F5] p-4 text-sm text-[#D64545]">
+            <div className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger">
               {erroImportacaoXml}
             </div>
           )}
 
           {erroAuditoria && (
-            <div className="mt-4 rounded-xl border border-[#D64545]/30 bg-[#FFF5F5] p-4">
-              <p className="font-semibold text-[#D64545]">
+            <div className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-4">
+              <p className="font-semibold text-danger">
                 Não foi possível processar a auditoria
               </p>
 
-              <p className="mt-1 text-sm text-[#D64545]">{erroAuditoria}</p>
+              <p className="mt-1 text-sm text-danger">{erroAuditoria}</p>
             </div>
           )}
         </div>
@@ -867,12 +867,12 @@ export default function ConferenciaDetalhePage() {
         ==================================================== */}
 
         {abrirReabertura && (
-          <div className="mb-6 rounded-2xl border border-[#E87524]/30 bg-white p-6 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
-            <h3 className="font-semibold text-[#C95F16]">
+          <div className="mb-6 rounded-2xl border border-attention/30 bg-white p-6 shadow-card">
+            <h3 className="font-semibold text-attention-strong">
               Reabrir conferência
             </h3>
 
-            <p className="mt-1 text-sm text-[#C95F16]">
+            <p className="mt-1 text-sm text-attention-strong">
               Informe obrigatoriamente o motivo da reabertura. Essa informação
               ficará registrada no histórico.
             </p>
@@ -883,7 +883,7 @@ export default function ConferenciaDetalhePage() {
               placeholder="Ex.: Divergência encontrada durante a auditoria. Necessário realizar nova contagem."
               rows={4}
               disabled={processandoAuditoria}
-              className="mt-4 w-full rounded-xl border border-[#DCE4DF] bg-[#F6F7F5] px-4 py-3 text-sm text-[#17231D] outline-none transition placeholder:text-[#64736B] focus:border-[#E87524] focus:ring-2 focus:ring-[#E87524]/15 disabled:opacity-50"
+              className="mt-4 w-full rounded-xl border border-line bg-canvas px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-attention focus:ring-2 focus:ring-attention/15 disabled:opacity-50"
             />
 
             <div className="mt-4 flex justify-end gap-3">
@@ -894,7 +894,7 @@ export default function ConferenciaDetalhePage() {
                   setErroAuditoria("");
                 }}
                 disabled={processandoAuditoria}
-                className="rounded-xl border border-[#DCE4DF] px-5 py-2.5 text-sm font-semibold text-[#0B3D2E] transition hover:bg-[#F6F7F5] disabled:opacity-50"
+                className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-brand transition hover:bg-canvas disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -902,7 +902,7 @@ export default function ConferenciaDetalhePage() {
               <button
                 onClick={reabrir}
                 disabled={processandoAuditoria}
-                className="rounded-xl bg-[#E87524] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#C95F16] disabled:opacity-50"
+                className="rounded-xl bg-attention px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-attention-strong disabled:opacity-50"
               >
                 {processandoAuditoria ? "Reabrindo..." : "Confirmar reabertura"}
               </button>
@@ -935,18 +935,18 @@ export default function ConferenciaDetalhePage() {
             PROGRESSO
         ==================================================== */}
 
-        <div className="mt-6 rounded-2xl border border-[#DCE4DF] bg-white p-5 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
+        <div className="mt-6 rounded-2xl border border-line bg-white p-5 shadow-card">
           <div className="mb-2 flex justify-between text-sm">
-            <span className="text-sm font-medium text-[#64736B]">
+            <span className="text-sm font-medium text-muted">
               Progresso da conferência
             </span>
 
-            <span className="font-semibold text-[#0B3D2E]">{percentual}%</span>
+            <span className="font-semibold text-brand">{percentual}%</span>
           </div>
 
-          <div className="h-2.5 overflow-hidden rounded-full bg-[#E7ECE9]">
+          <div className="h-2.5 overflow-hidden rounded-full bg-track">
             <div
-              className="h-full rounded-full bg-[#1DB954] transition-all"
+              className="h-full rounded-full bg-success transition-all"
               style={{
                 width: `${percentual}%`,
               }}
@@ -958,30 +958,30 @@ export default function ConferenciaDetalhePage() {
             ITENS
         ==================================================== */}
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-[#DCE4DF] bg-white shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
+        <section className="mt-8 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
           {/* =====================================================
       CABEÇALHO
   ====================================================== */}
 
-          <div className="border-b border-[#DCE4DF] px-6 py-5">
+          <div className="border-b border-line px-6 py-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-[#0B3D2E]">
+                <h2 className="text-lg font-semibold text-brand">
                   Itens da conferência
                 </h2>
 
-                <p className="mt-1 text-xs text-[#64736B]">
+                <p className="mt-1 text-xs text-muted">
                   Compare a quantidade esperada com a quantidade contada.
                 </p>
               </div>
 
-              <div className="text-xs text-[#64736B]">
+              <div className="text-xs text-muted">
                 Exibindo{" "}
-                <span className="font-semibold text-[#0B3D2E]">
+                <span className="font-semibold text-brand">
                   {itensFiltrados.length}
                 </span>{" "}
                 de{" "}
-                <span className="font-semibold text-[#0B3D2E]">
+                <span className="font-semibold text-brand">
                   {dados.itens.length}
                 </span>{" "}
                 itens
@@ -996,7 +996,7 @@ export default function ConferenciaDetalhePage() {
               {/* BUSCA */}
 
               <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#64736B]">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
                   <SearchIcon />
                 </span>
 
@@ -1005,7 +1005,7 @@ export default function ConferenciaDetalhePage() {
                   value={buscaItens}
                   onChange={(event) => setBuscaItens(event.target.value)}
                   placeholder="Buscar por código ou produto..."
-                  className="h-11 w-full rounded-xl border border-[#DCE4DF] bg-[#F6F7F5] pl-10 pr-4 text-sm text-[#17231D] outline-none transition placeholder:text-[#64736B] focus:border-[#176B4D] focus:bg-white focus:ring-2 focus:ring-[#176B4D]/10"
+                  className="h-11 w-full rounded-xl border border-line bg-canvas pl-10 pr-4 text-sm text-ink outline-none transition placeholder:text-muted focus:border-brand-light focus:bg-white focus:ring-2 focus:ring-brand-light/10"
                 />
               </div>
 
@@ -1022,7 +1022,7 @@ export default function ConferenciaDetalhePage() {
                       | "SEM_DIVERGENCIA",
                   )
                 }
-                className="h-11 rounded-xl border border-[#DCE4DF] bg-[#F6F7F5] px-4 text-sm text-[#17231D] outline-none transition focus:border-[#176B4D] focus:bg-white focus:ring-2 focus:ring-[#176B4D]/10"
+                className="h-11 rounded-xl border border-line bg-canvas px-4 text-sm text-ink outline-none transition focus:border-brand-light focus:bg-white focus:ring-2 focus:ring-brand-light/10"
               >
                 <option value="TODOS">Todos os itens</option>
 
@@ -1045,8 +1045,8 @@ export default function ConferenciaDetalhePage() {
                 className={[
                   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
                   filtroItens === "TODOS"
-                    ? "border-[#176B4D]/30 bg-[#EFFAF3] text-[#176B4D]"
-                    : "border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B] hover:bg-white hover:text-[#0B3D2E]",
+                    ? "border-brand-light/30 bg-success-soft text-brand-light"
+                    : "border-line bg-canvas text-muted hover:bg-white hover:text-brand",
                 ].join(" ")}
               >
                 Todos {dados.itens.length}
@@ -1058,8 +1058,8 @@ export default function ConferenciaDetalhePage() {
                 className={[
                   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
                   filtroItens === "DIVERGENCIAS"
-                    ? "border-[#D64545]/30 bg-[#FFF5F5] text-[#D64545]"
-                    : "border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B] hover:bg-white hover:text-[#0B3D2E]",
+                    ? "border-danger/30 bg-danger-soft text-danger"
+                    : "border-line bg-canvas text-muted hover:bg-white hover:text-brand",
                 ].join(" ")}
               >
                 Divergências {dados.divergentes}
@@ -1071,8 +1071,8 @@ export default function ConferenciaDetalhePage() {
                 className={[
                   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
                   filtroItens === "PENDENTES"
-                    ? "border-[#D99000]/30 bg-[#FFF8E8] text-[#A86F00]"
-                    : "border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B] hover:bg-white hover:text-[#0B3D2E]",
+                    ? "border-warning/30 bg-warning-soft text-warning-strong"
+                    : "border-line bg-canvas text-muted hover:bg-white hover:text-brand",
                 ].join(" ")}
               >
                 Pendentes{" "}
@@ -1089,8 +1089,8 @@ export default function ConferenciaDetalhePage() {
                 className={[
                   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
                   filtroItens === "SEM_DIVERGENCIA"
-                    ? "border-[#1DB954]/30 bg-[#EFFAF3] text-[#168C40]"
-                    : "border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B] hover:bg-white hover:text-[#0B3D2E]",
+                    ? "border-success/30 bg-success-soft text-success-strong"
+                    : "border-line bg-canvas text-muted hover:bg-white hover:text-brand",
                 ].join(" ")}
               >
                 Sem divergência{" "}
@@ -1101,13 +1101,13 @@ export default function ConferenciaDetalhePage() {
 
           {dados.itens.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-sm text-[#64736B]">Nenhum item encontrado.</p>
+              <p className="text-sm text-muted">Nenhum item encontrado.</p>
             </div>
           ) : (
             <div className="max-h-[650px] overflow-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-[#F6F7F5]">
-                  <tr className="border-b border-[#DCE4DF] text-left text-xs uppercase tracking-wide text-[#64736B]">
+                <thead className="sticky top-0 z-10 bg-canvas">
+                  <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                     <th className="px-6 py-4">Código</th>
 
                     <th className="px-6 py-4">Produto</th>
@@ -1124,20 +1124,20 @@ export default function ConferenciaDetalhePage() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-[#DCE4DF]">
+                <tbody className="divide-y divide-line">
                   {itensFiltrados.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-16 text-center">
                         <div className="mx-auto flex max-w-md flex-col items-center">
-                          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]">
+                          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-canvas text-muted">
                             <SearchIcon />
                           </div>
 
-                          <p className="font-medium text-[#17231D]">
+                          <p className="font-medium text-ink">
                             Nenhum item encontrado
                           </p>
 
-                          <p className="mt-2 text-sm text-[#64736B]">
+                          <p className="mt-2 text-sm text-muted">
                             Tente alterar a busca ou o filtro selecionado.
                           </p>
 
@@ -1147,7 +1147,7 @@ export default function ConferenciaDetalhePage() {
                               setBuscaItens("");
                               setFiltroItens("TODOS");
                             }}
-                            className="mt-4 rounded-lg border border-[#DCE4DF] px-4 py-2 text-xs font-semibold text-[#0B3D2E] transition hover:border-[#176B4D] hover:bg-[#F6F7F5]"
+                            className="mt-4 rounded-lg border border-line px-4 py-2 text-xs font-semibold text-brand transition hover:border-brand-light hover:bg-canvas"
                           >
                             Limpar filtros
                           </button>
@@ -1162,14 +1162,14 @@ export default function ConferenciaDetalhePage() {
                       return (
                         <tr
                           key={item.codigo}
-                          className="transition hover:bg-[#F6F7F5]"
+                          className="transition hover:bg-canvas"
                         >
-                          <td className="px-6 py-5 font-semibold text-[#17231D]">
+                          <td className="px-6 py-5 font-semibold text-ink">
                             {item.codigo}
                           </td>
 
                           <td className="px-6 py-5">
-                            <p className="font-medium text-[#17231D]">
+                            <p className="font-medium text-ink">
                               {item.descricao || "-"}
                             </p>
                           </td>
@@ -1178,10 +1178,10 @@ export default function ConferenciaDetalhePage() {
                               className={[
                                 "inline-flex min-w-[52px] items-center justify-center rounded-lg px-2.5 py-1.5 font-bold",
                                 item.diferenca < 0
-                                  ? "bg-[#FFF5F5] text-[#D64545]"
+                                  ? "bg-danger-soft text-danger"
                                   : item.diferenca > 0
-                                    ? "bg-[#FFF3EA] text-[#C95F16]"
-                                    : "bg-[#EFFAF3] text-[#168C40]",
+                                    ? "bg-attention-soft text-attention-strong"
+                                    : "bg-success-soft text-success-strong",
                               ].join(" ")}
                             >
                               {item.xml}
@@ -1192,8 +1192,8 @@ export default function ConferenciaDetalhePage() {
                             <span
                               className={
                                 item.divergente
-                                  ? "font-bold text-[#D64545]"
-                                  : "font-semibold text-[#168C40]"
+                                  ? "font-bold text-danger"
+                                  : "font-semibold text-success-strong"
                               }
                             >
                               {item.contado}
@@ -1203,10 +1203,10 @@ export default function ConferenciaDetalhePage() {
                           <td
                             className={`px-6 py-5 text-right font-semibold ${
                               item.diferenca < 0
-                                ? "text-[#D64545]"
+                                ? "text-danger"
                                 : item.diferenca > 0
-                                  ? "text-[#C95F16]"
-                                  : "text-[#168C40]"
+                                  ? "text-attention-strong"
+                                  : "text-success-strong"
                             }`}
                           >
                             {item.diferenca > 0
@@ -1217,22 +1217,22 @@ export default function ConferenciaDetalhePage() {
                           <td className="px-6 py-5">
                             {item.divergente ? (
                               <div className="space-y-1.5">
-                                <span className="inline-flex items-center rounded-lg border border-[#D64545]/30 bg-[#FFF5F5] px-2.5 py-1 text-xs font-semibold text-[#D64545]">
+                                <span className="inline-flex items-center rounded-lg border border-danger/30 bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger">
                                   Divergência
                                 </span>
 
-                                <p className="text-xs font-medium text-[#D64545]">
+                                <p className="text-xs font-medium text-danger">
                                   {formatarTipo(item.tipo_divergencia)}
                                 </p>
 
                                 {item.divergencia_id && (
-                                  <p className="text-xs text-[#64736B]">
+                                  <p className="text-xs text-muted">
                                     ID #{item.divergencia_id}
                                   </p>
                                 )}
                               </div>
                             ) : (
-                              <span className="inline-flex items-center rounded-lg border border-[#1DB954]/30 bg-[#EFFAF3] px-2.5 py-1 text-xs font-semibold text-[#168C40]">
+                              <span className="inline-flex items-center rounded-lg border border-success/30 bg-success-soft px-2.5 py-1 text-xs font-semibold text-success-strong">
                                 ✓ Sem divergência
                               </span>
                             )}
@@ -1240,23 +1240,23 @@ export default function ConferenciaDetalhePage() {
 
                           <td className="min-w-[320px] px-6 py-5">
                             {!item.divergente ? (
-                              <span className="text-[#64736B]">—</span>
+                              <span className="text-muted">—</span>
                             ) : item.justificado ? (
-                              <div className="rounded-lg border border-[#1DB954]/30 bg-[#EFFAF3] p-3">
+                              <div className="rounded-lg border border-success/30 bg-success-soft p-3">
                                 <div className="flex items-center justify-between gap-3">
-                                  <span className="font-semibold text-[#168C40]">
+                                  <span className="font-semibold text-success-strong">
                                     ✓ Justificado
                                   </span>
 
                                   {item.justificativa_tipo && (
-                                    <span className="text-xs text-[#64736B]">
+                                    <span className="text-xs text-muted">
                                       {formatarTipo(item.justificativa_tipo)}
                                     </span>
                                   )}
                                 </div>
 
                                 {item.justificativa_descricao && (
-                                  <p className="mt-2 text-sm leading-5 text-[#64736B]">
+                                  <p className="mt-2 text-sm leading-5 text-muted">
                                     {item.justificativa_descricao}
                                   </p>
                                 )}
@@ -1265,22 +1265,22 @@ export default function ConferenciaDetalhePage() {
                               <div className="space-y-3">
                                 {!justificando ? (
                                   <>
-                                    <span className="text-[#A86F00]">
+                                    <span className="text-warning-strong">
                                       Pendente
                                     </span>
 
                                     <div>
                                       <button
                                         onClick={() => abrirJustificativa(item)}
-                                        className="rounded-lg border border-[#D99000]/35 bg-[#FFF8E8] px-3 py-2 text-xs font-semibold text-[#A86F00] transition hover:bg-[#FCEFCB]"
+                                        className="rounded-lg border border-warning/35 bg-warning-soft px-3 py-2 text-xs font-semibold text-warning-strong transition hover:bg-warning-soft-hover"
                                       >
                                         Justificar
                                       </button>
                                     </div>
                                   </>
                                 ) : (
-                                  <div className="rounded-xl border border-[#D99000]/30 bg-[#FFF8E8] p-4">
-                                    <p className="mb-3 text-sm font-semibold text-[#A86F00]">
+                                  <div className="rounded-xl border border-warning/30 bg-warning-soft p-4">
+                                    <p className="mb-3 text-sm font-semibold text-warning-strong">
                                       Justificar divergência
                                     </p>
 
@@ -1290,7 +1290,7 @@ export default function ConferenciaDetalhePage() {
                                         setJustificativaTipo(event.target.value)
                                       }
                                       disabled={processandoJustificativa}
-                                      className="w-full rounded-lg border border-[#DCE4DF] bg-white px-3 py-2 text-sm text-[#17231D] outline-none focus:border-[#D99000] disabled:opacity-50"
+                                      className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-warning disabled:opacity-50"
                                     >
                                       <option value="">Selecione o tipo</option>
 
@@ -1314,11 +1314,11 @@ export default function ConferenciaDetalhePage() {
                                       placeholder="Descreva o motivo da divergência..."
                                       rows={4}
                                       disabled={processandoJustificativa}
-                                      className="mt-3 w-full rounded-lg border border-[#DCE4DF] bg-white px-3 py-2 text-sm text-[#17231D] outline-none placeholder:text-[#64736B] focus:border-[#D99000] disabled:opacity-50"
+                                      className="mt-3 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-warning disabled:opacity-50"
                                     />
 
                                     {erroJustificativa && (
-                                      <div className="rounded-lg border border-[#D64545]/30 bg-[#FFF5F5] p-3 text-xs text-[#D64545]">
+                                      <div className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-xs text-danger">
                                         {erroJustificativa}
                                       </div>
                                     )}
@@ -1327,7 +1327,7 @@ export default function ConferenciaDetalhePage() {
                                       <button
                                         onClick={cancelarJustificativa}
                                         disabled={processandoJustificativa}
-                                        className="rounded-lg border border-[#DCE4DF] px-3 py-2 text-xs font-semibold text-[#0B3D2E] hover:bg-white disabled:opacity-50"
+                                        className="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand hover:bg-white disabled:opacity-50"
                                       >
                                         Cancelar
                                       </button>
@@ -1335,7 +1335,7 @@ export default function ConferenciaDetalhePage() {
                                       <button
                                         onClick={() => justificar(item)}
                                         disabled={processandoJustificativa}
-                                        className="rounded-lg bg-[#1DB954] px-3 py-2 text-xs font-semibold text-white hover:bg-[#18A64A] disabled:opacity-50"
+                                        className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white hover:bg-success-hover disabled:opacity-50"
                                       >
                                         {processandoJustificativa
                                           ? "Salvando..."
@@ -1347,10 +1347,10 @@ export default function ConferenciaDetalhePage() {
                               </div>
                             ) : (
                               <div>
-                                <span className="text-[#A86F00]">Pendente</span>
+                                <span className="text-warning-strong">Pendente</span>
 
                                 {ehAuditor && statusAtual === "FINALIZADA" && (
-                                  <p className="mt-1 text-xs text-[#64736B]">
+                                  <p className="mt-1 text-xs text-muted">
                                     Aguardando justificativa do conferente.
                                   </p>
                                 )}
@@ -1375,62 +1375,62 @@ export default function ConferenciaDetalhePage() {
           <button
             type="button"
             onClick={() => setMostrarHistorico((atual) => !atual)}
-            className="flex w-full items-center justify-between rounded-2xl border border-[#DCE4DF] bg-white px-5 py-4 text-left shadow-[0_1px_2px_rgba(23,35,29,0.04)] transition hover:border-[#176B4D]/40 hover:shadow-sm"
+            className="flex w-full items-center justify-between rounded-2xl border border-line bg-white px-5 py-4 text-left shadow-card transition hover:border-brand-light/40 hover:shadow-sm"
           >
             <div>
-              <p className="font-semibold text-[#0B3D2E]">
+              <p className="font-semibold text-brand">
                 Histórico da conferência
               </p>
 
-              <p className="mt-1 text-xs text-[#64736B]">
+              <p className="mt-1 text-xs text-muted">
                 Consulte as alterações e decisões realizadas durante o processo.
               </p>
             </div>
 
-            <span className="ml-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0B3D2E] text-lg font-medium text-white">
+            <span className="ml-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-lg font-medium text-white">
               {mostrarHistorico ? "−" : "+"}
             </span>
           </button>
 
           {mostrarHistorico && (
-            <div className="mt-3 overflow-hidden rounded-2xl border border-[#DCE4DF] bg-white shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
+            <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
               {timeline.length === 0 ? (
                 <div className="px-6 py-10 text-center">
-                  <p className="text-sm text-[#64736B]">
+                  <p className="text-sm text-muted">
                     Nenhum evento registrado.
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-[#DCE4DF]">
+                <div className="divide-y divide-line">
                   {timeline.map((evento, index) => (
                     <div key={`${evento.data}-${index}`} className="px-6 py-5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="font-semibold text-[#0B3D2E]">
+                          <p className="font-semibold text-brand">
                             {evento.evento || evento.acao || "Evento"}
                           </p>
 
                           {evento.usuario && (
-                            <p className="mt-1 text-xs text-[#64736B]">
+                            <p className="mt-1 text-xs text-muted">
                               Usuário: {evento.usuario}
                             </p>
                           )}
 
                           {evento.motivo && (
-                            <p className="mt-2 text-sm text-[#64736B]">
+                            <p className="mt-2 text-sm text-muted">
                               {evento.motivo}
                             </p>
                           )}
 
                           {evento.descricao && (
-                            <p className="mt-2 text-sm text-[#64736B]">
+                            <p className="mt-2 text-sm text-muted">
                               {evento.descricao}
                             </p>
                           )}
                         </div>
 
                         {evento.data && (
-                          <p className="shrink-0 text-xs text-[#64736B]">
+                          <p className="shrink-0 text-xs text-muted">
                             {new Date(evento.data).toLocaleString("pt-BR")}
                           </p>
                         )}
@@ -1557,44 +1557,44 @@ function Resumo({ titulo, valor }: { titulo: string; valor: number | string }) {
   const destaque =
     titulo === "Divergências" && Number(valor) > 0
       ? {
-          borda: "border-[#D64545]/30",
-          numero: "text-[#D64545]",
-          ponto: "bg-[#D64545]",
+          borda: "border-danger/30",
+          numero: "text-danger",
+          ponto: "bg-danger",
         }
       : titulo === "Justificativas pendentes" && Number(valor) > 0
         ? {
-            borda: "border-[#D99000]/30",
-            numero: "text-[#A86F00]",
-            ponto: "bg-[#D99000]",
+            borda: "border-warning/30",
+            numero: "text-warning-strong",
+            ponto: "bg-warning",
           }
         : titulo === "Sem divergência" && Number(valor) > 0
           ? {
-              borda: "border-[#1DB954]/30",
-              numero: "text-[#168C40]",
-              ponto: "bg-[#1DB954]",
+              borda: "border-success/30",
+              numero: "text-success-strong",
+              ponto: "bg-success",
             }
           : titulo === "Progresso"
             ? {
-                borda: "border-[#1DB954]/30",
-                numero: "text-[#168C40]",
-                ponto: "bg-[#1DB954]",
+                borda: "border-success/30",
+                numero: "text-success-strong",
+                ponto: "bg-success",
               }
             : {
-                borda: "border-[#DCE4DF]",
-                numero: "text-[#17231D]",
-                ponto: "bg-[#64736B]",
+                borda: "border-line",
+                numero: "text-ink",
+                ponto: "bg-muted",
               };
 
   return (
     <div
       className={[
-        "rounded-2xl border bg-white p-5 shadow-[0_1px_2px_rgba(23,35,29,0.04)]",
+        "rounded-2xl border bg-white p-5 shadow-card",
         "transition duration-200 hover:-translate-y-0.5 hover:shadow-md",
         destaque.borda,
       ].join(" ")}
     >
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
           {titulo}
         </p>
 
