@@ -537,7 +537,7 @@ export default function ConferenciaDetalhePage() {
   ).length;
 
   const podeAuditar =
-    ehAuditor && statusAtual === "FINALIZADA" && divergenciasPendentes === 0;
+    ehAuditor && statusAtual === "FINALIZADA";
 
   const podeReabrir =
     ehAuditor && (statusAtual === "FINALIZADA" || statusAtual === "REPROVADA");
