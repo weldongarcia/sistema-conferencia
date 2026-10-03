@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { LayoutGrid } from "lucide-react";
 
 import {
   buscarConferencia,
@@ -592,7 +593,7 @@ export default function ConferenciaDetalhePage() {
       label: "Dashboard",
       href: "/dashboard",
       activeKey: "dashboard",
-      icon: <DashboardIcon />,
+      icon: <LayoutGrid size={18} strokeWidth={1.8} />,
     },
     {
       label: "Conferências",
@@ -1450,26 +1451,6 @@ export default function ConferenciaDetalhePage() {
 /* ============================================================
    ÍCONES DA NAVEGAÇÃO
 ============================================================ */
-
-function DashboardIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
 
 function ClipboardIcon() {
   return (

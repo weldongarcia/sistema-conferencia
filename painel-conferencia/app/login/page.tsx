@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { ArrowRight, CircleAlert } from "lucide-react";
 
 import { login, buscarUsuarioAtual } from "../../services/api";
 
@@ -288,23 +289,10 @@ export default function LoginPage() {
               {erro && (
                 <div className="rounded-xl border border-red-900/70 bg-red-950/30 px-4 py-3.5">
                   <div className="flex items-start gap-3">
-                    <svg
+                    <CircleAlert
                       className="mt-0.5 shrink-0 text-red-400"
-                      width="19"
-                      height="19"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-
-                      <line x1="12" y1="8" x2="12" y2="12" />
-
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
+                      size={19}
+                    />
 
                     <div>
                       <p className="text-sm font-medium text-red-300">
@@ -336,21 +324,10 @@ export default function LoginPage() {
                 ) : (
                   <>
                     ENTRAR
-                    <svg
+                    <ArrowRight
                       className="transition-transform duration-200 group-hover:translate-x-1"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="5" y1="12" x2="19" y2="12" />
-
-                      <polyline points="12 5 19 12 12 19" />
-                    </svg>
+                      size={20}
+                    />
                   </>
                 )}
               </button>
