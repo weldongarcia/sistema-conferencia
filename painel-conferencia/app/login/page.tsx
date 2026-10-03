@@ -1,7 +1,15 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { ArrowRight, CircleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  Lock,
+  ShieldCheck,
+  User,
+} from "lucide-react";
 
 import { login, buscarUsuarioAtual } from "../../services/api";
 
@@ -159,20 +167,7 @@ export default function LoginPage() {
                 <div className="relative">
                   {/* Ícone */}
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
-                    <svg
-                      width="21"
-                      height="21"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="7" r="4" />
-
-                      <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                    </svg>
+                    <User size={21} strokeWidth={1.8} />
                   </div>
 
                   <input
@@ -203,20 +198,7 @@ export default function LoginPage() {
                 <div className="relative">
                   {/* Cadeado */}
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
-                    <svg
-                      width="21"
-                      height="21"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="4" y="10" width="16" height="11" rx="2" />
-
-                      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                    </svg>
+                    <Lock size={21} strokeWidth={1.8} />
                   </div>
 
                   <input
@@ -243,40 +225,10 @@ export default function LoginPage() {
                   >
                     {mostrarSenha ? (
                       /* Olho aberto */
-                      <svg
-                        width="21"
-                        height="21"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
+                      <Eye size={21} strokeWidth={1.8} />
                     ) : (
                       /* Olho riscado */
-                      <svg
-                        width="21"
-                        height="21"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 3l18 18" />
-
-                        <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
-
-                        <path d="M9.9 4.3A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a18.2 18.2 0 0 1-3.1 4.3" />
-
-                        <path d="M6.2 6.2C3.6 8.2 2 12 2 12s3.5 8 10 8a9.8 9.8 0 0 0 4.1-.9" />
-                      </svg>
+                      <EyeOff size={21} strokeWidth={1.8} />
                     )}
                   </button>
                 </div>
@@ -339,20 +291,7 @@ export default function LoginPage() {
 
             <div className="mt-8 flex items-center justify-between border-t border-slate-800 pt-5 text-xs text-slate-500">
               <div className="flex items-center gap-2">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" />
-
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
+                <ShieldCheck size={16} strokeWidth={1.8} />
 
                 <span>Acesso seguro</span>
               </div>

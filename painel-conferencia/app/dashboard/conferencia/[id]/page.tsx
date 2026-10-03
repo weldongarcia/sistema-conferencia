@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Search, ShieldCheck, Upload } from "lucide-react";
 
 import {
   buscarConferencia,
@@ -607,7 +607,7 @@ export default function ConferenciaDetalhePage() {
             label: "Auditoria",
             href: "/dashboard/auditor",
             activeKey: "auditoria",
-            icon: <AuditIcon />,
+            icon: <ShieldCheck size={18} strokeWidth={1.8} />,
           },
         ]
       : []),
@@ -775,7 +775,7 @@ export default function ConferenciaDetalhePage() {
                     }}
                   />
 
-                  <UploadIcon />
+                  <Upload size={17} strokeWidth={1.8} aria-hidden="true" />
                   {importandoXml ? "Importando..." : "Importar XML"}
                 </label>
               )}
@@ -998,7 +998,7 @@ export default function ConferenciaDetalhePage() {
 
               <div className="relative flex-1">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-                  <SearchIcon />
+                  <Search size={17} strokeWidth={1.8} />
                 </span>
 
                 <input
@@ -1131,7 +1131,7 @@ export default function ConferenciaDetalhePage() {
                       <td colSpan={7} className="px-6 py-16 text-center">
                         <div className="mx-auto flex max-w-md flex-col items-center">
                           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-canvas text-muted">
-                            <SearchIcon />
+                            <Search size={17} strokeWidth={1.8} />
                           </div>
 
                           <p className="font-medium text-ink">
@@ -1469,63 +1469,6 @@ function ClipboardIcon() {
       <path d="M9 10h6" />
       <path d="M9 14h6" />
       <path d="M9 18h3" />
-    </svg>
-  );
-}
-
-function AuditIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-
-      <path d="m20 20-4-4" />
-    </svg>
-  );
-}
-
-function UploadIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 16V4" />
-      <path d="m8 8 4-4 4 4" />
-      <path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />
     </svg>
   );
 }

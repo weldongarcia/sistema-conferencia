@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, LayoutGrid } from "lucide-react";
+import { ArrowRight, CircleAlert, LayoutGrid, ShieldCheck } from "lucide-react";
 
 import AppShell from "../../../components/layout/AppShell";
 
@@ -153,7 +153,7 @@ export default function AuditorDashboardPage() {
       label: "Auditoria",
       href: "/dashboard/auditor",
       activeKey: "auditoria",
-      icon: <AuditIcon />,
+      icon: <ShieldCheck size={18} strokeWidth={1.8} />,
     },
   ];
 
@@ -603,25 +603,6 @@ function ClipboardIcon() {
       <path d="M9 14h6" />
 
       <path d="M9 18h3" />
-    </svg>
-  );
-}
-
-function AuditIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" />
-
-      <path d="M9 12l2 2 4-4" />
     </svg>
   );
 }

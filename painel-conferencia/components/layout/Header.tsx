@@ -1,5 +1,7 @@
 "use client";
 
+import { User } from "lucide-react";
+
 type HeaderProps = {
   usuario?: string;
   perfil?: string;
@@ -45,20 +47,7 @@ export default function Header({ usuario, perfil, onLogout }: HeaderProps) {
 
           {/* Avatar */}
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0B3D2E] text-white">
-            <svg
-              width="19"
-              height="19"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-white"
-            >
-              <circle cx="12" cy="7" r="4" />
-              <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-            </svg>
+            <User size={19} strokeWidth={1.8} className="text-white" />
           </div>
 
           {/* Separador */}
