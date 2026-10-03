@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CircleAlert, LayoutGrid } from "lucide-react";
 import AppShell from "../../components/layout/AppShell";
+import StatusBadge from "../../components/ui/StatusBadge";
 
 import {
   buscarConferencias,
@@ -469,58 +470,6 @@ function StatCard({
 
       <p className="mt-2 text-xs text-muted">{descricao}</p>
     </div>
-  );
-}
-
-/* ============================================================
-   STATUS BADGE
-============================================================ */
-
-function StatusBadge({ status }: { status: string }) {
-  const statusNormalizado = status.toUpperCase();
-
-  let classes = "border-line bg-canvas text-muted";
-
-  let indicador = "bg-muted";
-
-  if (statusNormalizado === "RASCUNHO") {
-    classes = "border-warning/30 bg-warning-soft text-warning-strong";
-
-    indicador = "bg-warning";
-  }
-
-  if (statusNormalizado === "REABERTA") {
-    classes = "border-attention/30 bg-attention-soft text-attention-strong";
-
-    indicador = "bg-attention";
-  }
-
-  if (statusNormalizado === "APROVADA") {
-    classes = "border-success/30 bg-success-soft text-success-strong";
-
-    indicador = "bg-success";
-  }
-
-  if (statusNormalizado === "FINALIZADA") {
-    classes = "border-info/30 bg-info-soft text-info";
-
-    indicador = "bg-info";
-  }
-
-  if (statusNormalizado === "REPROVADA") {
-    classes = "border-danger/30 bg-danger-soft text-danger";
-
-    indicador = "bg-danger";
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${classes}`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${indicador}`} />
-
-      {status}
-    </span>
   );
 }
 

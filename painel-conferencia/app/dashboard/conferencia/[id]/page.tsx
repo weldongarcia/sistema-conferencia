@@ -17,6 +17,7 @@ import {
 } from "../../../../services/api";
 
 import AppShell from "../../../../components/layout/AppShell";
+import { estiloStatus } from "../../../../components/ui/StatusBadge";
 
 type Usuario = {
   id: number;
@@ -459,29 +460,7 @@ export default function ConferenciaDetalhePage() {
   }
 
   function classeStatus(status: string) {
-    const normalizado = status.toUpperCase();
-
-    if (normalizado === "APROVADA") {
-      return "border border-success/30 bg-success-soft text-success-strong";
-    }
-
-    if (normalizado === "FINALIZADA") {
-      return "border border-info/30 bg-info-soft text-info";
-    }
-
-    if (normalizado === "REABERTA") {
-      return "border border-attention/30 bg-attention-soft text-attention-strong";
-    }
-
-    if (normalizado === "RASCUNHO") {
-      return "border border-warning/30 bg-warning-soft text-warning-strong";
-    }
-
-    if (normalizado === "REPROVADA") {
-      return "border border-danger/30 bg-danger-soft text-danger";
-    }
-
-    return "border border-line bg-canvas text-muted";
+    return `border ${estiloStatus(status).classes}`;
   }
 
   if (carregando) {

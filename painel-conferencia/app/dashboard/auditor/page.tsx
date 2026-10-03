@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CircleAlert, LayoutGrid, ShieldCheck } from "lucide-react";
 
 import AppShell from "../../../components/layout/AppShell";
+import StatusBadge from "../../../components/ui/StatusBadge";
 
 import { buscarConferencias, buscarUsuarioAtual } from "../../../services/api";
 
@@ -519,62 +520,6 @@ function StatCard({
 
       <p className="mt-2 text-xs text-muted">{descricao}</p>
     </div>
-  );
-}
-
-/* ============================================================
-   STATUS BADGE
-============================================================ */
-
-function StatusBadge({ status }: { status: string }) {
-  const normalizado = status.toUpperCase();
-
-  let classes = "border-line bg-canvas text-muted";
-
-  let indicador = "bg-muted";
-
-  if (normalizado === "RASCUNHO") {
-    classes = "border-warning/30 bg-warning-soft text-warning-strong";
-
-    indicador = "bg-warning";
-  }
-
-  if (normalizado === "REABERTA") {
-    classes = "border-attention/30 bg-attention-soft text-attention-strong";
-
-    indicador = "bg-attention";
-  }
-
-  if (normalizado === "FINALIZADA") {
-    classes = "border-info/30 bg-info-soft text-info";
-
-    indicador = "bg-info";
-  }
-
-  if (normalizado === "APROVADA") {
-    classes = "border-success/30 bg-success-soft text-success-strong";
-
-    indicador = "bg-success";
-  }
-
-  if (normalizado === "REPROVADA") {
-    classes = "border-danger/30 bg-danger-soft text-danger";
-
-    indicador = "bg-danger";
-  }
-
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-2 rounded-full border",
-        "px-3 py-1.5 text-xs font-semibold",
-        classes,
-      ].join(" ")}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${indicador}`} />
-
-      {status}
-    </span>
   );
 }
 
