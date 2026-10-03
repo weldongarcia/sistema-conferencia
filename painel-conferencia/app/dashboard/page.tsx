@@ -143,11 +143,11 @@ export default function DashboardPage() {
 
   if (carregando) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] text-[#17231D]">
+      <main className="flex min-h-screen items-center justify-center bg-canvas text-ink">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[#DCE4DF] border-t-[#176B4D]" />
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand-light" />
 
-          <p className="text-sm text-[#64736B]">Carregando painel...</p>
+          <p className="text-sm text-muted">Carregando painel...</p>
         </div>
       </main>
     );
@@ -169,29 +169,29 @@ export default function DashboardPage() {
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
             <div>
               <div className="mb-2 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#176B4D]" />
+                <span className="h-2 w-2 rounded-full bg-brand-light" />
 
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#176B4D]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">
                   {usuario?.perfil || "Usuário"}
                 </p>
               </div>
 
-              <h1 className="text-3xl font-bold tracking-tight text-[#0B3D2E] sm:text-4xl">
+              <h1 className="text-3xl font-bold tracking-tight text-brand sm:text-4xl">
                 Dashboard
               </h1>
 
-              <p className="mt-2 text-sm text-[#64736B]">
+              <p className="mt-2 text-sm text-muted">
                 Acompanhe as conferências do seu estabelecimento.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="rounded-xl border border-[#DCE4DF] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#64736B]">
+              <div className="rounded-xl border border-line bg-white px-4 py-3 shadow-card">
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
                   Estabelecimento
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-[#17231D]">
+                <p className="mt-1 text-sm font-semibold text-ink">
                   {nomeEstabelecimento()}
                 </p>
               </div>
@@ -199,7 +199,7 @@ export default function DashboardPage() {
               <button
                 onClick={novaConferencia}
                 disabled={carregando}
-                className="inline-flex h-[46px] items-center justify-center gap-2 rounded-xl bg-[#0B3D2E] px-5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(23,35,29,0.12)] transition hover:bg-[#176B4D] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-[46px] items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-button transition hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="text-lg leading-none">+</span>
 
@@ -214,18 +214,18 @@ export default function DashboardPage() {
         ====================================================== */}
 
         {erro && (
-          <div className="mb-6 rounded-xl border border-[#D64545]/30 bg-[#FFF5F5] p-5">
+          <div className="mb-6 rounded-xl border border-danger/30 bg-danger-soft p-5">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-[#D64545]">
+              <div className="mt-0.5 text-danger">
                 <AlertIcon />
               </div>
 
               <div>
-                <p className="font-semibold text-[#D64545]">
+                <p className="font-semibold text-danger">
                   Erro ao carregar o Dashboard
                 </p>
 
-                <p className="mt-1 text-sm text-[#D64545]">{erro}</p>
+                <p className="mt-1 text-sm text-danger">{erro}</p>
               </div>
             </div>
           </div>
@@ -278,22 +278,22 @@ export default function DashboardPage() {
                 CONFERÊNCIAS
             ================================================== */}
 
-            <section className="mt-8 overflow-hidden rounded-2xl border border-[#DCE4DF] bg-white shadow-[0_1px_2px_rgba(23,35,29,0.04)]">
+            <section className="mt-8 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
               {/* Cabeçalho da tabela */}
 
-              <div className="flex flex-col justify-between gap-3 border-b border-[#DCE4DF] px-6 py-5 sm:flex-row sm:items-center">
+              <div className="flex flex-col justify-between gap-3 border-b border-line px-6 py-5 sm:flex-row sm:items-center">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#0B3D2E]">
+                  <h2 className="text-lg font-semibold text-brand">
                     Minhas conferências
                   </h2>
 
-                  <p className="mt-1 text-xs text-[#64736B]">
+                  <p className="mt-1 text-xs text-muted">
                     Conferências disponíveis para o usuário autenticado.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="rounded-lg border border-[#DCE4DF] bg-[#F6F7F5] px-3 py-1.5 text-xs font-medium text-[#17231D]">
+                  <span className="rounded-lg border border-line bg-canvas px-3 py-1.5 text-xs font-medium text-ink">
                     {total} registro(s)
                   </span>
                 </div>
@@ -303,15 +303,15 @@ export default function DashboardPage() {
 
               {conferencias.length === 0 ? (
                 <div className="px-6 py-16 text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-canvas text-muted">
                     <ClipboardIcon />
                   </div>
 
-                  <p className="font-medium text-[#17231D]">
+                  <p className="font-medium text-ink">
                     Nenhuma conferência encontrada
                   </p>
 
-                  <p className="mx-auto mt-2 max-w-md text-sm text-[#64736B]">
+                  <p className="mx-auto mt-2 max-w-md text-sm text-muted">
                     Ainda não existem conferências vinculadas a este
                     estabelecimento.
                   </p>
@@ -319,31 +319,31 @@ export default function DashboardPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] text-left text-sm">
-                    <thead className="border-b border-[#DCE4DF] bg-[#F6F7F5]">
+                    <thead className="border-b border-line bg-canvas">
                       <tr>
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           ID
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Estabelecimento
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Status
                         </th>
 
-                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Data de início
                         </th>
 
-                        <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+                        <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
                           Ação
                         </th>
                       </tr>
                     </thead>
 
-                    <tbody className="divide-y divide-[#DCE4DF]">
+                    <tbody className="divide-y divide-line">
                       {conferencias.map((conferencia) => (
                         <tr
                           key={conferencia.id}
@@ -352,15 +352,15 @@ export default function DashboardPage() {
                               `/dashboard/conferencia/${conferencia.id}`,
                             )
                           }
-                          className="group cursor-pointer transition hover:bg-[#F6F7F5]"
+                          className="group cursor-pointer transition hover:bg-canvas"
                         >
                           <td className="px-6 py-4">
-                            <span className="font-semibold text-[#0B3D2E]">
+                            <span className="font-semibold text-brand">
                               #{conferencia.id}
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 text-[#64736B]">
+                          <td className="px-6 py-4 text-muted">
                             {conferencia.estabelecimento_id}
                           </td>
 
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                             <StatusBadge status={conferencia.status} />
                           </td>
 
-                          <td className="px-6 py-4 text-[#64736B]">
+                          <td className="px-6 py-4 text-muted">
                             {formatarData(conferencia.data_inicio)}
                           </td>
 
@@ -381,7 +381,7 @@ export default function DashboardPage() {
                                   `/dashboard/conferencia/${conferencia.id}`,
                                 );
                               }}
-                              className="inline-flex items-center gap-2 rounded-lg border border-[#DCE4DF] px-3 py-2 text-xs font-semibold text-[#0B3D2E] transition hover:border-[#176B4D] hover:bg-[#F6F7F5]"
+                              className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand transition hover:border-brand-light hover:bg-canvas"
                             >
                               Abrir
                               <ArrowIcon />
@@ -418,33 +418,33 @@ function StatCard({
 }) {
   const estilos = {
     default: {
-      borda: "border-[#DCE4DF]",
-      indicador: "bg-[#64736B]",
-      numero: "text-[#17231D]",
+      borda: "border-line",
+      indicador: "bg-muted",
+      numero: "text-ink",
     },
 
     warning: {
-      borda: "border-[#D99000]/35",
-      indicador: "bg-[#D99000]",
-      numero: "text-[#A86F00]",
+      borda: "border-warning/35",
+      indicador: "bg-warning",
+      numero: "text-warning-strong",
     },
 
     orange: {
-      borda: "border-[#E87524]/35",
-      indicador: "bg-[#E87524]",
-      numero: "text-[#C95F16]",
+      borda: "border-attention/35",
+      indicador: "bg-attention",
+      numero: "text-attention-strong",
     },
 
     info: {
-      borda: "border-[#3578B8]/35",
-      indicador: "bg-[#3578B8]",
-      numero: "text-[#3578B8]",
+      borda: "border-info/35",
+      indicador: "bg-info",
+      numero: "text-info",
     },
 
     success: {
-      borda: "border-[#1DB954]/35",
-      indicador: "bg-[#1DB954]",
-      numero: "text-[#168C40]",
+      borda: "border-success/35",
+      indicador: "bg-success",
+      numero: "text-success-strong",
     },
   };
 
@@ -452,10 +452,10 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-2xl border ${estilo.borda} bg-white p-5 shadow-[0_1px_2px_rgba(23,35,29,0.04)] transition hover:-translate-y-0.5 hover:shadow-md`}
+      className={`rounded-2xl border ${estilo.borda} bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-md`}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64736B]">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
           {titulo}
         </p>
 
@@ -466,7 +466,7 @@ function StatCard({
         {valor}
       </p>
 
-      <p className="mt-2 text-xs text-[#64736B]">{descricao}</p>
+      <p className="mt-2 text-xs text-muted">{descricao}</p>
     </div>
   );
 }
@@ -478,38 +478,38 @@ function StatCard({
 function StatusBadge({ status }: { status: string }) {
   const statusNormalizado = status.toUpperCase();
 
-  let classes = "border-[#DCE4DF] bg-[#F6F7F5] text-[#64736B]";
+  let classes = "border-line bg-canvas text-muted";
 
-  let indicador = "bg-[#64736B]";
+  let indicador = "bg-muted";
 
   if (statusNormalizado === "RASCUNHO") {
-    classes = "border-[#D99000]/30 bg-[#FFF8E8] text-[#A86F00]";
+    classes = "border-warning/30 bg-warning-soft text-warning-strong";
 
-    indicador = "bg-[#D99000]";
+    indicador = "bg-warning";
   }
 
   if (statusNormalizado === "REABERTA") {
-    classes = "border-[#E87524]/30 bg-[#FFF3EA] text-[#C95F16]";
+    classes = "border-attention/30 bg-attention-soft text-attention-strong";
 
-    indicador = "bg-[#E87524]";
+    indicador = "bg-attention";
   }
 
   if (statusNormalizado === "APROVADA") {
-    classes = "border-[#1DB954]/30 bg-[#EFFAF3] text-[#168C40]";
+    classes = "border-success/30 bg-success-soft text-success-strong";
 
-    indicador = "bg-[#1DB954]";
+    indicador = "bg-success";
   }
 
   if (statusNormalizado === "FINALIZADA") {
-    classes = "border-[#3578B8]/30 bg-[#EEF5FB] text-[#3578B8]";
+    classes = "border-info/30 bg-info-soft text-info";
 
-    indicador = "bg-[#3578B8]";
+    indicador = "bg-info";
   }
 
   if (statusNormalizado === "REPROVADA") {
-    classes = "border-[#D64545]/30 bg-[#FFF5F5] text-[#D64545]";
+    classes = "border-danger/30 bg-danger-soft text-danger";
 
-    indicador = "bg-[#D64545]";
+    indicador = "bg-danger";
   }
 
   return (
