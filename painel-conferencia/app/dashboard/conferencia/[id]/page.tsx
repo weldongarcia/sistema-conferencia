@@ -15,6 +15,7 @@ import {
   justificarDivergencia,
   importarXml,
 } from "../../../../services/api";
+import { limparSessao } from "../../../../services/sessao";
 
 import AppShell from "../../../../components/layout/AppShell";
 import EmptyState from "../../../../components/ui/EmptyState";
@@ -600,9 +601,7 @@ export default function ConferenciaDetalhePage() {
       menuItems={menuItems}
       activeKey="conferencias"
       onLogout={() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("usuario");
-        localStorage.removeItem("perfil");
+        limparSessao();
 
         router.push("/login");
       }}

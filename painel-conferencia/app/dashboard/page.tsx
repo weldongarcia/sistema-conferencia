@@ -13,6 +13,7 @@ import {
   buscarUsuarioAtual,
   criarConferencia,
 } from "../../services/api";
+import { limparSessao } from "../../services/sessao";
 
 type Usuario = {
   id: number;
@@ -111,9 +112,7 @@ export default function DashboardPage() {
   }
 
   function sair() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    localStorage.removeItem("perfil");
+    limparSessao();
 
     router.push("/login");
   }

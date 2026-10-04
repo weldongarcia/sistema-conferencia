@@ -10,6 +10,7 @@ import PageLoading from "../../../components/ui/PageLoading";
 import StatusBadge from "../../../components/ui/StatusBadge";
 
 import { buscarConferencias, buscarUsuarioAtual } from "../../../services/api";
+import { limparSessao } from "../../../services/sessao";
 
 type Usuario = {
   id: number;
@@ -84,9 +85,7 @@ export default function AuditorDashboardPage() {
   ========================================================== */
 
   function sair() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    localStorage.removeItem("perfil");
+    limparSessao();
 
     router.push("/login");
   }
