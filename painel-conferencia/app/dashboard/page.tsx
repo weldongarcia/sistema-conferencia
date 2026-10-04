@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CircleAlert, LayoutGrid } from "lucide-react";
 import AppShell from "../../components/layout/AppShell";
 import EmptyState from "../../components/ui/EmptyState";
+import PageLoading from "../../components/ui/PageLoading";
 import StatusBadge from "../../components/ui/StatusBadge";
 
 import {
@@ -145,15 +146,7 @@ export default function DashboardPage() {
   ];
 
   if (carregando) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas text-ink">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand-light" />
-
-          <p className="text-sm text-muted">Carregando painel...</p>
-        </div>
-      </main>
-    );
+    return <PageLoading mensagem="Carregando painel..." />;
   }
 
   return (
