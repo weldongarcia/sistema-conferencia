@@ -40,14 +40,18 @@ export default function DashboardPage() {
   const [conferencias, setConferencias] = useState<Conferencia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [criando, setCriando] = useState(false);
+  const [erroCriacao, setErroCriacao] = useState("");
 
   useEffect(() => {
     async function carregar() {
       try {
         const token = localStorage.getItem("token");
 
+        // Nos redirecionamentos o loading é mantido para não
+        // exibir o painel vazio antes da troca de rota.
         if (!token) {
-          router.push("/login");
+          router.replace("/login");
           return;
         }
 
@@ -67,6 +71,7 @@ export default function DashboardPage() {
 
         setUsuario(dadosUsuario);
         setConferencias(dadosConferencias);
+        setCarregando(false);
       } catch (error) {
         if (tratarSessaoExpirada(error, router)) return;
 
@@ -77,7 +82,6 @@ export default function DashboardPage() {
             ? error.message
             : "Não foi possível carregar o Dashboard.",
         );
-      } finally {
         setCarregando(false);
       }
     }
@@ -92,34 +96,35 @@ export default function DashboardPage() {
   }
 
   async function novaConferencia() {
-    if (carregando) return;
+    if (criando) return;
 
     try {
-      setCarregando(true);
-      setErro("");
+      setCriando(true);
+      setErroCriacao("");
 
       const token = localStorage.getItem("token");
 
       if (!token) {
-        router.push("/login");
+        router.replace("/login");
         return;
       }
 
       const conferencia = await criarConferencia(token);
 
+      // Mantém "Criando..." até a navegação concluir.
       router.push(`/dashboard/conferencia/${conferencia.id}`);
     } catch (error) {
       if (tratarSessaoExpirada(error, router)) return;
 
       console.error(error);
 
-      setErro(
+      setErroCriacao(
         error instanceof Error
           ? error.message
           : "Não foi possível criar a conferência.",
       );
 
-      setCarregando(false);
+      setCriando(false);
     }
   }
 
@@ -193,12 +198,12 @@ export default function DashboardPage() {
 
               <button
                 onClick={novaConferencia}
-                disabled={carregando}
+                disabled={criando}
                 className="inline-flex h-[46px] items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-button transition hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="text-lg leading-none">+</span>
 
-                {carregando ? "Criando..." : "Nova Conferência"}
+                {criando ? "Criando..." : "Nova Conferência"}
               </button>
             </div>
           </div>
@@ -221,6 +226,24 @@ export default function DashboardPage() {
                 </p>
 
                 <p className="mt-1 text-sm text-danger">{erro}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {erroCriacao && (
+          <div className="mb-6 rounded-xl border border-danger/30 bg-danger-soft p-5">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 text-danger">
+                <CircleAlert size={19} />
+              </div>
+
+              <div>
+                <p className="font-semibold text-danger">
+                  Não foi possível criar a conferência
+                </p>
+
+                <p className="mt-1 text-sm text-danger">{erroCriacao}</p>
               </div>
             </div>
           </div>

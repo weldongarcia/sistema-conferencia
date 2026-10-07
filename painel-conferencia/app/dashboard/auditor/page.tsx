@@ -50,8 +50,10 @@ export default function AuditorDashboardPage() {
       try {
         const token = localStorage.getItem("token");
 
+        // Nos redirecionamentos o loading é mantido para não
+        // exibir o painel vazio antes da troca de rota.
         if (!token) {
-          router.push("/login");
+          router.replace("/login");
           return;
         }
 
@@ -62,7 +64,7 @@ export default function AuditorDashboardPage() {
         ================================================= */
 
         if (usuarioAtual.perfil !== "AUDITOR") {
-          router.push("/dashboard");
+          router.replace("/dashboard");
           return;
         }
 
@@ -70,6 +72,7 @@ export default function AuditorDashboardPage() {
 
         setUsuario(usuarioAtual);
         setConferencias(dados);
+        setCarregando(false);
       } catch (error) {
         if (tratarSessaoExpirada(error, router)) return;
 
@@ -80,7 +83,6 @@ export default function AuditorDashboardPage() {
             ? error.message
             : "Não foi possível carregar o painel do auditor.",
         );
-      } finally {
         setCarregando(false);
       }
     }

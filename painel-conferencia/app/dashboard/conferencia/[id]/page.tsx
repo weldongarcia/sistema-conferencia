@@ -31,6 +31,7 @@ import {
   menuPorPerfil,
 } from "../../../../components/layout/menu";
 import EmptyState from "../../../../components/ui/EmptyState";
+import PageLoading from "../../../../components/ui/PageLoading";
 import { estiloStatus } from "../../../../components/ui/StatusBadge";
 
 type Usuario = {
@@ -192,8 +193,10 @@ export default function ConferenciaDetalhePage() {
       try {
         const token = localStorage.getItem("token");
 
+        // Nos redirecionamentos o loading é mantido para não
+        // exibir a tela de erro antes da troca de rota.
         if (!token) {
-          router.push("/login");
+          router.replace("/login");
           return;
         }
 
@@ -220,6 +223,7 @@ export default function ConferenciaDetalhePage() {
 
         setTimeline(historico.eventos);
         setErroTimeline(historico.erro);
+        setCarregando(false);
       } catch (error) {
         if (tratarSessaoExpirada(error, router)) return;
 
@@ -230,7 +234,6 @@ export default function ConferenciaDetalhePage() {
             ? error.message
             : "Não foi possível carregar a conferência.",
         );
-      } finally {
         setCarregando(false);
       }
     }
@@ -567,13 +570,7 @@ export default function ConferenciaDetalhePage() {
   }
 
   if (carregando) {
-    return (
-      <main className="min-h-screen bg-canvas text-ink">
-        <div className="flex min-h-screen items-center justify-center">
-          <p className="text-muted">Carregando conferência...</p>
-        </div>
-      </main>
-    );
+    return <PageLoading mensagem="Carregando conferência..." />;
   }
 
   if (erro || !dados) {
