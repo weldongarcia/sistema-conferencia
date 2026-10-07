@@ -16,6 +16,7 @@ import {
   importarXml,
   ehSessaoExpirada,
 } from "../../../../services/api";
+import { formatarQuantidade } from "../../../../services/formatacao";
 import {
   limparSessao,
   tratarSessaoExpirada,
@@ -1312,19 +1313,21 @@ export default function ConferenciaDetalhePage() {
                               {item.descricao || "-"}
                             </p>
                           </td>
+                          {/* Esperado vem da NF: exibição neutra.
+                              A cor semântica fica em Contado/Diferença. */}
                           <td className="px-6 py-5 text-right">
-                            <span
-                              className={[
-                                "inline-flex min-w-[52px] items-center justify-center rounded-lg px-2.5 py-1.5 font-bold",
-                                item.diferenca < 0
-                                  ? "bg-danger-soft text-danger"
-                                  : item.diferenca > 0
-                                    ? "bg-attention-soft text-attention-strong"
-                                    : "bg-success-soft text-success-strong",
-                              ].join(" ")}
-                            >
-                              {item.xml}
-                            </span>
+                            {item.tipo_divergencia === "PRODUTO_A_MAIS" ? (
+                              <span
+                                className="text-muted"
+                                title="Produto fora da nota"
+                              >
+                                —
+                              </span>
+                            ) : (
+                              <span className="inline-flex min-w-[52px] items-center justify-center rounded-lg bg-canvas px-2.5 py-1.5 font-bold text-ink">
+                                {formatarQuantidade(item.xml)}
+                              </span>
+                            )}
                           </td>
 
                           <td className="px-6 py-5 text-right">
@@ -1335,7 +1338,7 @@ export default function ConferenciaDetalhePage() {
                                   : "font-semibold text-success-strong"
                               }
                             >
-                              {item.contado}
+                              {formatarQuantidade(item.contado)}
                             </span>
                           </td>
 
@@ -1349,8 +1352,8 @@ export default function ConferenciaDetalhePage() {
                             }`}
                           >
                             {item.diferenca > 0
-                              ? `+${item.diferenca}`
-                              : item.diferenca}
+                              ? `+${formatarQuantidade(item.diferenca)}`
+                              : formatarQuantidade(item.diferenca)}
                           </td>
 
                           <td className="px-6 py-5">
