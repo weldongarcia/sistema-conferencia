@@ -610,7 +610,10 @@ export default function ConferenciaDetalhePage() {
   const podeFechar =
     ehConferente && (statusAtual === "RASCUNHO" || statusAtual === "REABERTA");
 
-  const podeImportarXml = podeFechar;
+  // O backend aceita uma única NF por conferência.
+  const possuiNotaImportada = dados.itens.some((item) => item.xml > 0);
+
+  const podeImportarXml = podeFechar && !possuiNotaImportada;
 
   const divergenciasPendentes = dados.itens.filter(
     (item) => item.divergente && !item.justificado,
@@ -868,10 +871,25 @@ export default function ConferenciaDetalhePage() {
               {podeFechar && (
                 <button
                   onClick={fechar}
-                  disabled={fechando}
-                  className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-success-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={fechando || divergenciasPendentes > 0}
+                  title={
+                    divergenciasPendentes > 0
+                      ? `Existem ${divergenciasPendentes} divergência(s) sem justificativa.`
+                      : "Finalizar conferência"
+                  }
+                  className={[
+                    "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                    divergenciasPendentes > 0
+                      ? "cursor-not-allowed border border-line bg-canvas text-muted"
+                      : "bg-success text-white hover:bg-success-hover",
+                    "disabled:cursor-not-allowed disabled:opacity-60",
+                  ].join(" ")}
                 >
-                  {fechando ? "Fechando..." : "Finalizar"}
+                  {fechando
+                    ? "Fechando..."
+                    : divergenciasPendentes > 0
+                      ? `Finalizar (${divergenciasPendentes} pendente${divergenciasPendentes > 1 ? "s" : ""})`
+                      : "Finalizar"}
                 </button>
               )}
 
