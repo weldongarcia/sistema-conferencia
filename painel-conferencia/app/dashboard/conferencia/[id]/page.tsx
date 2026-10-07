@@ -1574,9 +1574,18 @@ export default function ConferenciaDetalhePage() {
                             {evento.evento || evento.acao || "Evento"}
                           </p>
 
-                          {evento.usuario && (
+                          {(evento.usuario || evento.versao != null) && (
                             <p className="mt-1 text-xs text-muted">
-                              Usuário: {evento.usuario}
+                              {[
+                                evento.versao != null
+                                  ? `Versão ${evento.versao}`
+                                  : null,
+                                evento.usuario
+                                  ? `Usuário: ${evento.usuario}`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" • ")}
                             </p>
                           )}
 

@@ -147,6 +147,7 @@ export default function DashboardPage() {
   const reaberta = contarStatus("REABERTA");
   const aprovada = contarStatus("APROVADA");
   const finalizada = contarStatus("FINALIZADA");
+  const reprovada = contarStatus("REPROVADA");
 
   if (carregando) {
     return <PageLoading mensagem="Carregando painel..." />;
@@ -255,7 +256,7 @@ export default function DashboardPage() {
 
         {!erro && (
           <>
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
               <StatCard
                 titulo="Total"
                 valor={total}
@@ -287,8 +288,15 @@ export default function DashboardPage() {
               <StatCard
                 titulo="Finalizadas"
                 valor={finalizada}
-                descricao="Processos encerrados"
+                descricao="Aguardando auditoria"
                 destaque="info"
+              />
+
+              <StatCard
+                titulo="Reprovadas"
+                valor={reprovada}
+                descricao="Aguardando reabertura"
+                destaque="danger"
               />
             </section>
 
@@ -425,7 +433,7 @@ function StatCard({
   titulo: string;
   valor: number;
   descricao: string;
-  destaque: "default" | "warning" | "orange" | "info" | "success";
+  destaque: "default" | "warning" | "orange" | "info" | "success" | "danger";
 }) {
   const estilos = {
     default: {
@@ -456,6 +464,12 @@ function StatCard({
       borda: "border-success/35",
       indicador: "bg-success",
       numero: "text-success-strong",
+    },
+
+    danger: {
+      borda: "border-danger/35",
+      indicador: "bg-danger",
+      numero: "text-danger",
     },
   };
 
