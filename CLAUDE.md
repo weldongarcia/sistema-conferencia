@@ -184,6 +184,8 @@ Contagem representa quantidade de um código dentro da conferência.
 
 O fluxo de sincronização trabalha com snapshot. Ausência no snapshot equivale a quantidade zero.
 
+No cálculo de divergências, contagem 0 equivale a ausência de contagem.
+
 Existe `ContagemHistorico` para rastreabilidade.
 
 Não criar eventos artificiais `0 -> 0`.
@@ -216,6 +218,37 @@ Divergências são associadas à versão da conferência.
 
 Não misturar divergências de versões anteriores com a versão atual.
 
+### Cálculo e manutenção (BACKEND-01.1)
+
+Fonte única da regra: `calcular_comparacao` em `backend/app/services/divergencia_service.py`. Não acessa o banco.
+
+| Situação | Resultado |
+|---|---|
+| Item da NF sem contagem ou com contagem 0 | `PRODUTO_NAO_ENCONTRADO` |
+| Item da NF com contagem > 0 e menor que a NF | `QUANTIDADE_MENOR` |
+| Item da NF com contagem igual à NF | sem divergência |
+| Item da NF com contagem maior que a NF | `QUANTIDADE_MAIOR` |
+| Produto fora da NF com contagem > 0 | `PRODUTO_A_MAIS` |
+| Produto fora da NF com contagem 0 | sem divergência (não aparece) |
+
+Linhas repetidas do mesmo código na NF e nas contagens são somadas; códigos passam por `normalizar_codigo`.
+
+As divergências gravadas são mantidas somente por `recalcular_divergencias`, chamado nos fluxos de escrita:
+
+- sincronização (`/conferencias/{id}/sincronizar` e `/contagens/sincronizar/{id}`);
+- `POST /contagens/`;
+- importação de XML;
+- reabertura (gera as divergências da nova versão);
+- fechamento (recalcula antes de validar pendências).
+
+`recalcular_divergencias`:
+
+- atua somente na versão atual;
+- não grava em `FINALIZADA`, `APROVADA` ou `REPROVADA`;
+- não faz commit próprio (o fluxo chamador controla a transação).
+
+`GET /conferencia/{id}` é somente leitura: calcula na hora e exibe as divergências gravadas da versão atual. Não criar, atualizar ou remover divergências em operações de leitura.
+
 ## 13. Justificativas
 
 Uma divergência pode possuir:
@@ -226,6 +259,8 @@ Uma divergência pode possuir:
 Quando uma divergência muda materialmente, a justificativa anterior pode precisar ser invalidada.
 
 Não preservar automaticamente uma justificativa para uma situação diferente.
+
+Mudança material é definida por `divergencia_corresponde`: XML, contado, diferença, tipo ou origem diferentes do cálculo. O recálculo invalida a justificativa somente nesse caso. O GET exibe `divergencia_id` e justificativa somente quando a divergência gravada corresponde ao cálculo; caso contrário retorna `divergencia_id = null` e `justificado = false`, sem alterar o banco.
 
 ## 14. Auditoria e histórico
 
@@ -513,6 +548,8 @@ Backend, quando aplicável:
 python -m pytest
 ```
 
+Executar em `backend/`, com as dependências de `backend/requirements-dev.txt` (pytest e httpx; não instalar em produção). Os testes ficam em `backend/tests/` e usam SQLite em memória, sem PostgreSQL; o `conftest.py` monta apenas os routers necessários porque `app/main.py` executa `create_all` no PostgreSQL ao ser importado.
+
 Mobile, quando aplicável:
 
 ```bash
@@ -607,17 +644,53 @@ Alterações recentes relevantes:
 - evolução do fluxo de auditoria;
 - melhorias de feedback do coletor.
 
+### BACKEND-01.1 — concluído
+
+Integridade das divergências e GET somente leitura:
+
+- recálculo centralizado (`calcular_comparacao` e `recalcular_divergencias`);
+- recálculo nos fluxos de escrita (sync, contagens, XML, reabrir, fechar);
+- sync corrigido: não altera, move ou apaga divergências de versões anteriores; considera contagens criadas no próprio snapshot; soma linhas repetidas da NF;
+- `GET /conferencia/{id}` somente leitura, com contrato HTTP inalterado;
+- script de saneamento de divergências legadas (`backend/scripts/recalcular_divergencias.py`);
+- testes automatizados em `backend/tests/` cobrindo esses comportamentos.
+
+Script de recálculo legado (executar em `backend/`):
+
+```bash
+python -m scripts.recalcular_divergencias                       # dry-run (padrão)
+python -m scripts.recalcular_divergencias --apply               # grava
+python -m scripts.recalcular_divergencias --conferencia-id 12   # limita (pode repetir)
+```
+
+- atua somente em `RASCUNHO` e `REABERTA`; demais status são ignorados;
+- dry-run é o padrão e não grava nada; `--apply` é explícito;
+- `--apply` grava em uma única transação; erro desfaz tudo;
+- idempotente.
+
 O sistema continua em desenvolvimento.
 
 ## 31. Dívidas técnicas conhecidas
 
 1. `SECRET_KEY` do JWT está definida diretamente no código.
-2. Verificar se `jose` e `passlib` estão declarados nas dependências do backend.
+2. Dependências do backend: `backend/requirements.txt` não declara `python-jose`, `passlib` e `bcrypt`, usados pelo código de autenticação. Revisar o arquivo e garantir que todas as dependências de produção estejam declaradas.
 3. O backend usa `create_all`; avaliar futuramente migrations formais.
 4. Performance da bipagem offline precisa de medição e otimização.
 5. Transferência/separação ainda está em evolução.
 6. Caixas fracionadas precisam de modelagem adequada.
 7. Estruturas antigas podem coexistir com a atual; não remover sem confirmar uso.
+
+Registradas após o BACKEND-01.1 (não corrigidas):
+
+8. **Regras de estado / auditoria.** `POST /contagens/` e a sincronização aceitam escritas em `APROVADA` e `REPROVADA` (só bloqueiam `FINALIZADA`), permitindo alterar contagens após uma auditoria. O recálculo não grava divergências nesses status, então o GET pode exibir a divergência como não justificada enquanto o banco mantém a justificativa auditada. A solução futura deve bloquear essas escritas conforme as regras de estado. No mesmo tema: `fechar` só bloqueia `FINALIZADA` e a justificativa de divergência só bloqueia `FINALIZADA`.
+9. **Fluxo de aprovação.** `aprovar` valida pelas divergências persistidas e não recalcula. Revisar junto com as regras de estado (item 8).
+10. **Quantidade fracionada.** `ItemNF.quantidade` é texto e `Contagem`/`Divergencia` usam Integer. A regra de cálculo está centralizada e todos os fluxos usam a mesma comparação (`quantidade_persistida` arredonda meio para par ao gravar e comparar), mas o domínio ainda não representa quantidade fracionada adequadamente.
+11. **`DATABASE_URL` / configuração.** `backend/app/database/connection.py` tem a URL do banco com credenciais no código. Externalizar a configuração (ex.: variável de ambiente) sem credenciais acopladas ao código.
+12. **Importação de XML / segurança.** `POST /notas/importar-xml` não exige autenticação nem verifica perfil e estabelecimento. Revisar autenticação e isolamento.
+13. **Script de recálculo legado.** A primeira execução real deve ser validada no PostgreSQL com dry-run. Recomenda-se janela sem operação para `--apply` (o script não bloqueia conferências contra escritas concorrentes).
+14. **Histórico de invalidação de justificativa.** Quando o recálculo invalida ou remove uma justificativa, não é registrado evento em `conferencia_historico` (o texto original permanece no evento `DIVERGENCIA_JUSTIFICADA`). Avaliar evento próprio, considerando o impacto na timeline do painel.
+15. **Unicidade de divergência.** Não há restrição única em `(conferencia_id, versao, codigo)` na tabela `divergencias`; o recálculo remove duplicatas da versão atual, mas o banco não as impede.
+16. **Envio de contagens pelo coletor.** O coletor ainda não envia contagens ao backend (nem `POST /contagens/` nem sincronização); somente lê a conferência e chama o fechamento.
 
 ## 32. O que não fazer
 
