@@ -26,6 +26,7 @@ from app.models.item_nf import ItemNF
 from app.schemas.contagem import ContagemCreate
 from app.schemas.sincronizacao import SincronizacaoContagem
 from app.services.conferencia_service import (
+    comparar_conferencia,
     fechar_conferencia,
     reabrir_conferencia,
 )
@@ -645,6 +646,10 @@ def fluxo_reabrir(db, conferencia, conferente, auditor):
     )
 
 
+def fluxo_get(db, conferencia, conferente, auditor):
+    comparar_conferencia(db, conferencia.id, auditor)
+
+
 @pytest.mark.parametrize(
     "fluxo",
     [
@@ -653,8 +658,9 @@ def fluxo_reabrir(db, conferencia, conferente, auditor):
         fluxo_importar_xml,
         fluxo_fechar,
         fluxo_reabrir,
+        fluxo_get,
     ],
-    ids=["sync", "contagem", "importar_xml", "fechar", "reabrir"],
+    ids=["sync", "contagem", "importar_xml", "fechar", "reabrir", "get"],
 )
 def test_fluxo_nao_altera_versoes_anteriores(
     db, fabrica, conferente, auditor, fluxo

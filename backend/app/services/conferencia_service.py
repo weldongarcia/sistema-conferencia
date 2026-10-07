@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -17,6 +19,8 @@ from app.core.status import (
 from app.services.conferencia_historico_service import registrar_historico
 from app.services.divergencia_service import (
     calcular_comparacao,
+    divergencia_corresponde,
+    escolher_divergencia,
     recalcular_divergencias
 )
 from app.utils.codigo import normalizar_codigo
@@ -92,9 +96,11 @@ def comparar_conferencia(
     ).all()
 
     # ==========================================
-    # BUSCAR DIVERGÊNCIAS DA VERSÃO ATUAL
+    # DIVERGÊNCIAS GRAVADAS DA VERSÃO ATUAL
     #
-    # As versões anteriores permanecem preservadas.
+    # Somente leitura: o GET não cria, atualiza nem
+    # remove divergências. Elas são mantidas pelos
+    # fluxos de escrita (recalcular_divergencias).
     # ==========================================
 
     divergencias_existentes = db.query(
@@ -102,11 +108,20 @@ def comparar_conferencia(
     ).filter(
         Divergencia.conferencia_id == conferencia_id,
         Divergencia.versao == versao_atual
+    ).order_by(
+        Divergencia.id
     ).all()
 
+    gravadas_por_codigo = defaultdict(list)
+
+    for d in divergencias_existentes:
+        gravadas_por_codigo[
+            normalizar_codigo(d.codigo)
+        ].append(d)
+
     mapa_divergencias = {
-        normalizar_codigo(d.codigo): d
-        for d in divergencias_existentes
+        codigo: escolher_divergencia(gravadas)
+        for codigo, gravadas in gravadas_por_codigo.items()
     }
 
     # ==========================================
@@ -115,10 +130,6 @@ def comparar_conferencia(
 
     resultado = []
 
-    # ==========================================
-    # COMPARAÇÃO
-    # ==========================================
-
     comparacao = calcular_comparacao(
         itens_nf,
         contagens
@@ -126,35 +137,18 @@ def comparar_conferencia(
 
     for item in comparacao:
 
-        codigo = item.codigo
-        xml_qtd = item.xml
-        cont_qtd = item.contado
-        diferenca = item.diferenca
-        tipo = item.tipo
-        origem = item.origem
-
         # ======================================
         # SEM DIVERGÊNCIA
         # ======================================
 
-        if tipo is None:
-
-            divergencia_existente = (
-                mapa_divergencias.get(codigo)
-            )
-
-            if divergencia_existente:
-
-                db.delete(
-                    divergencia_existente
-                )
+        if not item.divergente:
 
             resultado.append({
-                "codigo": codigo,
+                "codigo": item.codigo,
                 "descricao": item.descricao,
-                "xml": xml_qtd,
-                "contado": cont_qtd,
-                "diferenca": diferenca,
+                "xml": item.xml,
+                "contado": item.contado,
+                "diferenca": item.diferenca,
                 "divergente": False,
                 "divergencia_id": None,
                 "tipo_divergencia": None,
@@ -166,69 +160,26 @@ def comparar_conferencia(
             continue
 
         # ======================================
-        # EXISTE DIVERGÊNCIA
+        # DIVERGÊNCIA GRAVADA CORRESPONDENTE
+        #
+        # Ausente ou obsoleta: a divergência calculada
+        # é exibida sem id e sem justificativa, até o
+        # próximo recálculo de um fluxo de escrita.
         # ======================================
 
         divergencia = mapa_divergencias.get(
-            codigo
+            item.codigo
         )
 
-        # ======================================
-        # CRIAR NOVA DIVERGÊNCIA
-        # ======================================
-
-        if not divergencia:
-
-            divergencia = Divergencia(
-                conferencia_id=conferencia_id,
-                codigo=codigo,
-                xml=xml_qtd,
-                contado=cont_qtd,
-                diferenca=diferenca,
-                tipo=tipo,
-                origem=origem,
-                versao=versao_atual
-            )
-
-            db.add(
-                divergencia
-            )
-
-            db.flush()
-
-        # ======================================
-        # ATUALIZAR DIVERGÊNCIA EXISTENTE
-        # ======================================
-
-        else:
-
-            houve_alteracao = (
-                divergencia.xml != xml_qtd
-                or divergencia.contado != cont_qtd
-                or divergencia.diferenca != diferenca
-                or divergencia.tipo != tipo
-                or divergencia.origem != origem
-            )
-
-            divergencia.xml = xml_qtd
-            divergencia.contado = cont_qtd
-            divergencia.diferenca = diferenca
-            divergencia.tipo = tipo
-            divergencia.origem = origem
-
-            if houve_alteracao:
-
-                divergencia.justificativa_tipo = None
-
-                divergencia.justificativa_descricao = None
-
-        # ======================================
-        # PREPARAR JUSTIFICATIVA
-        # ======================================
+        if (
+            divergencia is not None
+            and not divergencia_corresponde(divergencia, item)
+        ):
+            divergencia = None
 
         justificativa_tipo = None
 
-        if divergencia.justificativa_tipo:
+        if divergencia is not None and divergencia.justificativa_tipo:
 
             justificativa_tipo = (
                 divergencia.justificativa_tipo.value
@@ -241,41 +192,27 @@ def comparar_conferencia(
                 )
             )
 
-        # ======================================
-        # ADICIONAR AO RESULTADO
-        # ======================================
-
         resultado.append({
-            "codigo": codigo,
+            "codigo": item.codigo,
             "descricao": item.descricao,
-            "xml": xml_qtd,
-            "contado": cont_qtd,
-            "diferenca": diferenca,
+            "xml": item.xml,
+            "contado": item.contado,
+            "diferenca": item.diferenca,
             "divergente": True,
-            "divergencia_id": divergencia.id,
-            "tipo_divergencia": (
-                tipo.value
-                if hasattr(
-                    tipo,
-                    "value"
-                )
-                else str(tipo)
+            "divergencia_id": (
+                divergencia.id
+                if divergencia is not None
+                else None
             ),
-            "justificado": (
-                divergencia.justificativa_tipo
-                is not None
-            ),
+            "tipo_divergencia": item.tipo.value,
+            "justificado": justificativa_tipo is not None,
             "justificativa_tipo": justificativa_tipo,
             "justificativa_descricao": (
                 divergencia.justificativa_descricao
+                if divergencia is not None
+                else None
             )
         })
-
-    # ==========================================
-    # COMMIT
-    # ==========================================
-
-    db.commit()
 
     # ==========================================
     # TOTALIZADORES

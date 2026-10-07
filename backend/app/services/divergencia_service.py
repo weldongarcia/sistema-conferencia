@@ -252,7 +252,7 @@ class ResumoRecalculo:
         ))
 
 
-def _escolher_divergencia(divergencias):
+def escolher_divergencia(divergencias):
     """
     Entre linhas duplicadas do mesmo código na mesma versão,
     mantém a justificada mais antiga; sem justificada, a mais
@@ -343,7 +343,7 @@ def recalcular_divergencias(
 
     for codigo, gravadas in gravadas_por_codigo.items():
 
-        mantida = _escolher_divergencia(gravadas)
+        mantida = escolher_divergencia(gravadas)
 
         mapa_divergencias[codigo] = mantida
 
