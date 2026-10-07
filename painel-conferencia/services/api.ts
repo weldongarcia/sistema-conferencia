@@ -1,70 +1,166 @@
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
-export async function login(usuario: string, senha: string) {
-  const response = await fetch(`${API_URL}/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      username: usuario,
-      senha: senha,
-    }),
-  });
+/* ============================================================
+   ERROS
+============================================================ */
 
-  const data = await response.json();
+export class SessaoExpiradaError extends Error {
+  constructor(mensagem = "Sessão expirada. Faça login novamente.") {
+    super(mensagem);
+    this.name = "SessaoExpiradaError";
+  }
+}
 
-  if (!response.ok) {
+export function ehSessaoExpirada(error: unknown) {
+  return error instanceof SessaoExpiradaError;
+}
+
+function extrairMensagemErro(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+
+  const detail = (data as { detail?: unknown }).detail;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  // Erros de validação do FastAPI (422): lista de { msg, loc, ... }
+  if (Array.isArray(detail)) {
+    const mensagens = detail
+      .map((item) =>
+        item && typeof item === "object" && "msg" in item
+          ? String((item as { msg: unknown }).msg)
+          : null,
+      )
+      .filter(Boolean);
+
+    if (mensagens.length > 0) {
+      return mensagens.join(" ");
+    }
+  }
+
+  return null;
+}
+
+/* ============================================================
+   REQUISIÇÃO
+============================================================ */
+
+type OpcoesRequisicao = {
+  method?: "GET" | "POST";
+  token?: string;
+  json?: unknown;
+  formData?: FormData;
+  // Em /login, 401 significa credenciais inválidas, não sessão expirada.
+  tratar401ComoSessao?: boolean;
+};
+
+async function requisicao(
+  caminho: string,
+  opcoes: OpcoesRequisicao,
+  mensagemPadrao: string,
+) {
+  const {
+    method = "GET",
+    token,
+    json,
+    formData,
+    tratar401ComoSessao = true,
+  } = opcoes;
+
+  const headers: Record<string, string> = {};
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  let body: BodyInit | undefined;
+
+  if (formData) {
+    body = formData;
+  } else if (json !== undefined) {
+    headers["Content-Type"] = "application/json";
+    body = JSON.stringify(json);
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${caminho}`, {
+      method,
+      headers,
+      body,
+      cache: method === "GET" ? "no-store" : undefined,
+    });
+  } catch {
     throw new Error(
-      data?.detail || "Usuário ou senha inválidos."
+      "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.",
     );
   }
 
-  return data;
+  const texto = await response.text();
+
+  let data: unknown = null;
+
+  if (texto) {
+    try {
+      data = JSON.parse(texto);
+    } catch {
+      data = null;
+    }
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 && tratar401ComoSessao) {
+      throw new SessaoExpiradaError();
+    }
+
+    throw new Error(
+      extrairMensagemErro(data) ?? `${mensagemPadrao} (${response.status})`,
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return data as any;
+}
+
+/* ============================================================
+   AUTENTICAÇÃO
+============================================================ */
+
+export async function login(usuario: string, senha: string) {
+  return requisicao(
+    "/login",
+    {
+      method: "POST",
+      json: {
+        username: usuario,
+        senha: senha,
+      },
+      tratar401ComoSessao: false,
+    },
+    "Usuário ou senha inválidos.",
+  );
 }
 
 export async function buscarUsuarioAtual(token: string) {
-  const response = await fetch(`${API_URL}/usuario/me`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao buscar usuário: ${response.status}`
-    );
-  }
-
-  return data;
+  return requisicao(
+    "/usuario/me",
+    { token },
+    "Erro ao buscar usuário",
+  );
 }
 
+/* ============================================================
+   CONFERÊNCIAS
+============================================================ */
+
 export async function criarConferencia(token: string) {
-  const response = await fetch(`${API_URL}/conferencias`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({}),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao criar conferência: ${response.status}`
-    );
-  }
-
-  return data;
+  return requisicao(
+    "/conferencias",
+    { method: "POST", token, json: {} },
+    "Erro ao criar conferência",
+  );
 }
 
 export async function importarXml(
@@ -77,154 +173,63 @@ export async function importarXml(
   formData.append("conferencia_id", String(conferenciaId));
   formData.append("file", arquivo);
 
-  const response = await fetch(`${API_URL}/notas/importar-xml`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail || `Erro ao importar XML: ${response.status}`,
-    );
-  }
-
-  return data;
+  return requisicao(
+    "/notas/importar-xml",
+    { method: "POST", token, formData },
+    "Erro ao importar XML",
+  );
 }
 
 export async function buscarConferencias(token: string) {
-  const response = await fetch(`${API_URL}/conferencias`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao buscar conferências: ${response.status}`
-    );
-  }
-
-  return data;
+  return requisicao(
+    "/conferencias",
+    { token },
+    "Erro ao buscar conferências",
+  );
 }
 
 export async function buscarConferencia(
   token: string,
   conferenciaId: number
 ) {
-  const response = await fetch(
-    `${API_URL}/conferencia/${conferenciaId}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    }
+  return requisicao(
+    `/conferencia/${conferenciaId}`,
+    { token },
+    "Erro ao buscar conferência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao buscar conferência: ${response.status}`
-    );
-  }
-
-  return data;
 }
 
 export async function fecharConferencia(
   token: string,
   conferenciaId: number
 ) {
-  const response = await fetch(
-    `${API_URL}/conferencia/${conferenciaId}/fechar`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }
+  return requisicao(
+    `/conferencia/${conferenciaId}/fechar`,
+    { method: "POST", token },
+    "Erro ao fechar conferência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao fechar conferência: ${response.status}`
-    );
-  }
-
-  return data;
 }
 
 export async function aprovarConferencia(
   token: string,
   conferenciaId: number
 ) {
-  const response = await fetch(
-    `${API_URL}/conferencia/${conferenciaId}/aprovar`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }
+  return requisicao(
+    `/conferencia/${conferenciaId}/aprovar`,
+    { method: "POST", token },
+    "Erro ao aprovar conferência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao aprovar conferência: ${response.status}`
-    );
-  }
-
-  return data;
 }
 
 export async function reprovarConferencia(
   token: string,
   conferenciaId: number
 ) {
-  const response = await fetch(
-    `${API_URL}/conferencia/${conferenciaId}/reprovar`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }
+  return requisicao(
+    `/conferencia/${conferenciaId}/reprovar`,
+    { method: "POST", token },
+    "Erro ao reprovar conferência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao reprovar conferência: ${response.status}`
-    );
-  }
-
-  return data;
 }
 
 export async function reabrirConferencia(
@@ -232,28 +237,11 @@ export async function reabrirConferencia(
   conferenciaId: number,
   motivo: string
 ) {
-  const response = await fetch(
-    `${API_URL}/conferencia/${conferenciaId}/reabrir`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(motivo),
-    }
+  return requisicao(
+    `/conferencia/${conferenciaId}/reabrir`,
+    { method: "POST", token, json: motivo },
+    "Erro ao reabrir conferência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao reabrir conferência: ${response.status}`
-    );
-  }
-
-  return data;
 }
 
 export async function justificarDivergencia(
@@ -262,61 +250,27 @@ export async function justificarDivergencia(
   justificativaTipo: string,
   justificativaDescricao: string
 ) {
-  const response = await fetch(
-    `${API_URL}/divergencias/${divergenciaId}/justificar`,
+  return requisicao(
+    `/divergencias/${divergenciaId}/justificar`,
     {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+      token,
+      json: {
         justificativa_tipo: justificativaTipo,
-        justificativa_descricao:
-          justificativaDescricao,
-      }),
-    }
+        justificativa_descricao: justificativaDescricao,
+      },
+    },
+    "Erro ao justificar divergência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    let mensagem = "Erro ao justificar divergência.";
-
-    if (typeof data?.detail === "string") {
-      mensagem = data.detail;
-    }
-
-    throw new Error(mensagem);
-  }
-
-  return data;
 }
 
 export async function buscarTimelineConferencia(
   token: string,
   conferenciaId: number
 ) {
-  const response = await fetch(
-    `${API_URL}/conferencia/${conferenciaId}/timeline`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    }
+  return requisicao(
+    `/conferencia/${conferenciaId}/timeline`,
+    { token },
+    "Erro ao buscar histórico da conferência",
   );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.detail ||
-        `Erro ao buscar histórico da conferência: ${response.status}`
-    );
-  }
-
-  return data;
 }

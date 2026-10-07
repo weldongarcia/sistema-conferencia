@@ -15,7 +15,10 @@ import {
   justificarDivergencia,
   importarXml,
 } from "../../../../services/api";
-import { limparSessao } from "../../../../services/sessao";
+import {
+  limparSessao,
+  tratarSessaoExpirada,
+} from "../../../../services/sessao";
 
 import AppShell from "../../../../components/layout/AppShell";
 import ClipboardIcon from "../../../../components/ui/ClipboardIcon";
@@ -162,6 +165,8 @@ export default function ConferenciaDetalhePage() {
           Array.isArray(timelineAtualizada) ? timelineAtualizada : [],
         );
       } catch (error) {
+        if (tratarSessaoExpirada(error, router)) return;
+
         console.error(error);
 
         setErro(
@@ -228,6 +233,8 @@ export default function ConferenciaDetalhePage() {
 
       await atualizarDados();
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErroFechamento(
@@ -258,6 +265,8 @@ export default function ConferenciaDetalhePage() {
 
       await atualizarDados();
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErroImportacaoXml(
@@ -295,6 +304,8 @@ export default function ConferenciaDetalhePage() {
 
       await atualizarDados();
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErroAuditoria(
@@ -332,6 +343,8 @@ export default function ConferenciaDetalhePage() {
 
       await atualizarDados();
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErroAuditoria(
@@ -372,6 +385,8 @@ export default function ConferenciaDetalhePage() {
 
       await atualizarDados();
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErroAuditoria(
@@ -441,6 +456,8 @@ export default function ConferenciaDetalhePage() {
 
       await atualizarDados();
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErroJustificativa(

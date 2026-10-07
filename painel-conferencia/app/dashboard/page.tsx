@@ -14,7 +14,7 @@ import {
   buscarUsuarioAtual,
   criarConferencia,
 } from "../../services/api";
-import { limparSessao } from "../../services/sessao";
+import { limparSessao, tratarSessaoExpirada } from "../../services/sessao";
 
 type Usuario = {
   id: number;
@@ -57,6 +57,8 @@ export default function DashboardPage() {
         setUsuario(dadosUsuario);
         setConferencias(dadosConferencias);
       } catch (error) {
+        if (tratarSessaoExpirada(error, router)) return;
+
         console.error(error);
 
         setErro(
@@ -100,6 +102,8 @@ export default function DashboardPage() {
 
       router.push(`/dashboard/conferencia/${conferencia.id}`);
     } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
       console.error(error);
 
       setErro(

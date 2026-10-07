@@ -11,7 +11,7 @@ import PageLoading from "../../../components/ui/PageLoading";
 import StatusBadge from "../../../components/ui/StatusBadge";
 
 import { buscarConferencias, buscarUsuarioAtual } from "../../../services/api";
-import { limparSessao } from "../../../services/sessao";
+import { limparSessao, tratarSessaoExpirada } from "../../../services/sessao";
 
 type Usuario = {
   id: number;
@@ -66,6 +66,8 @@ export default function AuditorDashboardPage() {
         setUsuario(usuarioAtual);
         setConferencias(dados);
       } catch (error) {
+        if (tratarSessaoExpirada(error, router)) return;
+
         console.error(error);
 
         setErro(
