@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, LayoutGrid } from "lucide-react";
+import { ArrowRight, CircleAlert } from "lucide-react";
 import AppShell from "../../components/layout/AppShell";
+import { MENU_CONFERENCIAS, menuPorPerfil } from "../../components/layout/menu";
 import ClipboardIcon from "../../components/ui/ClipboardIcon";
 import EmptyState from "../../components/ui/EmptyState";
 import PageLoading from "../../components/ui/PageLoading";
@@ -49,10 +50,19 @@ export default function DashboardPage() {
           return;
         }
 
-        const [dadosUsuario, dadosConferencias] = await Promise.all([
-          buscarUsuarioAtual(token),
-          buscarConferencias(token),
-        ]);
+        const dadosUsuario = await buscarUsuarioAtual(token);
+
+        /* ================================================
+           PROTEÇÃO DE PERFIL
+           Auditor possui painel próprio.
+        ================================================= */
+
+        if (dadosUsuario.perfil === "AUDITOR") {
+          router.replace("/dashboard/auditor");
+          return;
+        }
+
+        const dadosConferencias = await buscarConferencias(token);
 
         setUsuario(dadosUsuario);
         setConferencias(dadosConferencias);
@@ -136,19 +146,6 @@ export default function DashboardPage() {
   const aprovada = contarStatus("APROVADA");
   const finalizada = contarStatus("FINALIZADA");
 
-  const menuItems = [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      icon: <LayoutGrid size={18} strokeWidth={1.8} />,
-    },
-    {
-      label: "Conferências",
-      href: "/dashboard",
-      icon: <ClipboardIcon />,
-    },
-  ];
-
   if (carregando) {
     return <PageLoading mensagem="Carregando painel..." />;
   }
@@ -157,7 +154,8 @@ export default function DashboardPage() {
     <AppShell
       usuario={usuario?.username}
       perfil={usuario?.perfil}
-      menuItems={menuItems}
+      menuItems={menuPorPerfil(usuario?.perfil)}
+      activeKey={MENU_CONFERENCIAS}
       onLogout={sair}
     >
       <div className="mx-auto w-full max-w-[1500px] p-5 sm:p-8">

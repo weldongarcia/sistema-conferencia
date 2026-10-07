@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { LayoutGrid, Search, ShieldCheck, Upload } from "lucide-react";
+import { Search, Upload } from "lucide-react";
 
 import {
   buscarConferencia,
@@ -21,7 +21,10 @@ import {
 } from "../../../../services/sessao";
 
 import AppShell from "../../../../components/layout/AppShell";
-import ClipboardIcon from "../../../../components/ui/ClipboardIcon";
+import {
+  MENU_CONFERENCIAS,
+  menuPorPerfil,
+} from "../../../../components/layout/menu";
 import EmptyState from "../../../../components/ui/EmptyState";
 import { estiloStatus } from "../../../../components/ui/StatusBadge";
 
@@ -587,37 +590,12 @@ export default function ConferenciaDetalhePage() {
     return true;
   });
 
-  const menuItems = [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      activeKey: "dashboard",
-      icon: <LayoutGrid size={18} strokeWidth={1.8} />,
-    },
-    {
-      label: "Conferências",
-      href: usuario?.perfil === "AUDITOR" ? "/dashboard/auditor" : "/dashboard",
-      activeKey: "conferencias",
-      icon: <ClipboardIcon />,
-    },
-    ...(ehAuditor
-      ? [
-          {
-            label: "Auditoria",
-            href: "/dashboard/auditor",
-            activeKey: "auditoria",
-            icon: <ShieldCheck size={18} strokeWidth={1.8} />,
-          },
-        ]
-      : []),
-  ];
-
   return (
     <AppShell
       usuario={usuario?.username}
       perfil={usuario?.perfil}
-      menuItems={menuItems}
-      activeKey="conferencias"
+      menuItems={menuPorPerfil(usuario?.perfil)}
+      activeKey={MENU_CONFERENCIAS}
       onLogout={() => {
         limparSessao();
 

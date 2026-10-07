@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, LayoutGrid, ShieldCheck } from "lucide-react";
+import { ArrowRight, CircleAlert } from "lucide-react";
 
 import AppShell from "../../../components/layout/AppShell";
+import {
+  MENU_CONFERENCIAS,
+  menuPorPerfil,
+} from "../../../components/layout/menu";
 import ClipboardIcon from "../../../components/ui/ClipboardIcon";
 import EmptyState from "../../../components/ui/EmptyState";
 import PageLoading from "../../../components/ui/PageLoading";
@@ -128,31 +132,6 @@ export default function AuditorDashboardPage() {
   }
 
   /* ==========================================================
-     MENU DO AUDITOR
-  ========================================================== */
-
-  const menuItems = [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      activeKey: "dashboard",
-      icon: <LayoutGrid size={18} strokeWidth={1.8} />,
-    },
-    {
-      label: "Conferências",
-      href: "/dashboard/auditor",
-      activeKey: "conferencias",
-      icon: <ClipboardIcon />,
-    },
-    {
-      label: "Auditoria",
-      href: "/dashboard/auditor",
-      activeKey: "auditoria",
-      icon: <ShieldCheck size={18} strokeWidth={1.8} />,
-    },
-  ];
-
-  /* ==========================================================
      INDICADORES
   ========================================================== */
 
@@ -176,8 +155,8 @@ export default function AuditorDashboardPage() {
     <AppShell
       usuario={usuario?.username}
       perfil="AUDITOR"
-      menuItems={menuItems}
-      activeKey="auditoria"
+      menuItems={menuPorPerfil("AUDITOR")}
+      activeKey={MENU_CONFERENCIAS}
       onLogout={sair}
     >
       <div className="mx-auto w-full max-w-[1500px] p-5 sm:p-8">
