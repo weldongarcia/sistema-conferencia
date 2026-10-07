@@ -23,8 +23,8 @@ class ApiService {
         )
         .timeout(const Duration(seconds: 10));
 
+    // Nunca registrar o corpo: contém o access_token.
     debugPrint('STATUS LOGIN: ${response.statusCode}');
-    debugPrint('BODY LOGIN: ${response.body}');
 
     if (response.statusCode == 200) {
       return LoginResponse.fromJson(jsonDecode(response.body));
@@ -41,7 +41,6 @@ class ApiService {
         .timeout(const Duration(seconds: 10));
 
     debugPrint('STATUS USUÁRIO: ${response.statusCode}');
-    debugPrint('BODY USUÁRIO: ${response.body}');
 
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(jsonDecode(response.body));

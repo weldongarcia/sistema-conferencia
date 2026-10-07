@@ -1,32 +1,18 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
-from jose import jwt, JWTError
 from app.database.connection import SessionLocal
 from app.models.usuario import Usuario
-from app.core.security import SECRET_KEY, ALGORITHM, security
+from app.core.security import TokenInvalido, decodificar_token, security
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     token = credentials.credentials
 
+    # Assinatura, HS256, exp e sub obrigatórios. O token e o motivo
+    # da falha não são registrados.
     try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
-        )
-
-        username = payload.get("sub")
-
-        if not username:
-            raise HTTPException(
-                status_code=401,
-                detail="Token inválido"
-            )
-
-    except JWTError as e:
-        print("ERRO JWT:", str(e))
-
+        username = decodificar_token(token)
+    except TokenInvalido:
         raise HTTPException(
             status_code=401,
             detail="Token inválido"
@@ -39,10 +25,12 @@ def get_current_user(
             Usuario.username == username
         ).first()
 
+        # Mesma resposta de um token inválido. O perfil efetivo vem
+        # do banco, nunca do claim do token.
         if not usuario:
             raise HTTPException(
                 status_code=401,
-                detail="Usuário não encontrado"
+                detail="Token inválido"
             )
 
         return usuario

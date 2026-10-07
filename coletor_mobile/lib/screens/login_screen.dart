@@ -106,12 +106,6 @@ class _LoginScreenState extends State<LoginScreen> {
             : (usuarioAtual['estabelecimento_id'] as num).toInt(),
       );
 
-      debugPrint('=== LOGIN REALIZADO ===');
-      debugPrint('Usuário ID: ${authService.usuarioId}');
-      debugPrint('Username: ${authService.username}');
-      debugPrint('Perfil: ${authService.perfil}');
-      debugPrint('Estabelecimento: ${authService.estabelecimentoId}');
-
       // Somente o CONFERENTE precisa baixar o catálogo para o coletor.
       // O AUDITOR continua podendo entrar normalmente, sem tentar
       // acessar a rota exclusiva de sincronização.

@@ -6,6 +6,15 @@ necessários. O app/main.py não é importado porque executa
 create_all no PostgreSQL durante a importação.
 """
 
+import os
+import secrets
+
+# Configuração de teste definida ANTES de importar o app. Atribuição
+# direta (e não setdefault) para que os testes nunca usem um
+# DATABASE_URL ou SECRET_KEY reais do ambiente ou de backend/.env.
+os.environ["SECRET_KEY"] = "teste-" + secrets.token_urlsafe(48)
+os.environ["DATABASE_URL"] = "sqlite://"
+
 import pytest
 
 from fastapi import FastAPI
@@ -105,12 +114,13 @@ class Fabrica:
         perfil="CONFERENTE",
         estabelecimento_id=1,
         username=None,
+        senha="hash-de-teste",
     ):
         total = self.db.query(Usuario).count()
 
         return self._salvar(Usuario(
             username=username or f"usuario{total + 1}",
-            senha="hash-de-teste",
+            senha=senha,
             perfil=perfil,
             estabelecimento_id=estabelecimento_id,
         ))
@@ -260,3 +270,69 @@ def app_teste(SessionTeste, usuario_atual):
 def client(app_teste):
     with TestClient(app_teste) as cliente:
         yield cliente
+
+
+# ============================================================
+# API COM AUTENTICAÇÃO REAL
+#
+# Ao contrário de app_teste, não substitui get_current_user:
+# o token JWT é validado de verdade.
+# ============================================================
+
+@pytest.fixture
+def app_autenticado(SessionTeste, monkeypatch):
+    import app.database.connection as conexao
+    import app.utils.auth as auth_util
+
+    from app.routes import auth as rota_auth
+    from app.routes import itens as rota_itens
+    from app.routes import notas as rota_notas
+    from app.routes import usuario as rota_usuario
+
+    # get_current_user abre a própria sessão via SessionLocal.
+    monkeypatch.setattr(auth_util, "SessionLocal", SessionTeste)
+
+    app = FastAPI()
+
+    for rota in (
+        rota_auth,
+        rota_usuario,
+        rota_conferencia,
+        rota_notas,
+        rota_itens,
+    ):
+        app.include_router(rota.router)
+
+    def get_db_teste():
+        sessao = SessionTeste()
+
+        try:
+            yield sessao
+        finally:
+            sessao.close()
+
+    for dependencia in (
+        conexao.get_db,
+        rota_conferencia.get_db,
+        rota_notas.get_db,
+    ):
+        app.dependency_overrides[dependencia] = get_db_teste
+
+    return app
+
+
+@pytest.fixture
+def client_autenticado(app_autenticado):
+    with TestClient(app_autenticado) as cliente:
+        yield cliente
+
+
+def cabecalho_token(usuario):
+    from app.core.security import criar_token
+
+    return {
+        "Authorization": "Bearer " + criar_token(
+            usuario.username,
+            usuario.perfil,
+        )
+    }

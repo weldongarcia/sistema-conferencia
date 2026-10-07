@@ -110,13 +110,14 @@ Regras:
 - não criar autenticação paralela sem necessidade;
 - mudanças de autenticação devem considerar backend, web e mobile.
 
-### Dívida técnica conhecida
+### Configuração e senhas (SEC-01A)
 
-`backend/app/core/security.py` possui `SECRET_KEY` definida diretamente no código.
-
-Tratar isso como dívida técnica. Migrar para variável de ambiente sem expor o segredo.
-
-Também verificar se todas as dependências importadas pelo backend estão declaradas em `backend/requirements.txt`.
+- `SECRET_KEY` e `DATABASE_URL` são lidas do ambiente por `backend/app/core/config.py`. Ambas são obrigatórias e não têm valor padrão; sem elas o backend falha na inicialização. `SECRET_KEY` precisa ter pelo menos 32 caracteres e o valor antigo `sua-chave-secreta` é recusado.
+- Em desenvolvimento, `backend/.env` é carregado se existir (`python-dotenv`); variáveis já definidas no ambiente têm prioridade. Modelo sem segredos: `backend/.env.example`. Arquivos `.env` e `.env.*` não são versionados.
+- Isso vale também para os scripts em `backend/scripts/`.
+- JWT: HS256, expiração de 8 horas, `exp` e `sub` obrigatórios; o perfil efetivo vem do banco, não do token.
+- Senhas: Argon2id (`argon2-cffi`), limite de 128 caracteres. Passlib e bcrypt foram removidos. As dependências de autenticação estão em `backend/requirements.txt`.
+- Senhas legadas em texto puro: o login ainda as aceita e as converte para Argon2id no primeiro acesso (`_verificar_senha_legada_texto_puro_migracao`). Esse caminho é temporário e deve ser removido depois da migração real (ver §31).
 
 ## 8. Estados da conferência
 
@@ -548,7 +549,7 @@ Backend, quando aplicável:
 python -m pytest
 ```
 
-Executar em `backend/`, com as dependências de `backend/requirements-dev.txt` (pytest e httpx; não instalar em produção). Os testes ficam em `backend/tests/` e usam SQLite em memória, sem PostgreSQL; o `conftest.py` monta apenas os routers necessários porque `app/main.py` executa `create_all` no PostgreSQL ao ser importado.
+Executar em `backend/`, com as dependências de `backend/requirements-dev.txt` (pytest e httpx; não instalar em produção). Os testes ficam em `backend/tests/` e usam SQLite em memória, sem PostgreSQL; o `conftest.py` monta apenas os routers necessários porque `app/main.py` executa `create_all` no PostgreSQL ao ser importado. O `conftest.py` define `SECRET_KEY` e `DATABASE_URL` de teste antes de importar o app, então os testes nunca usam `backend/.env` nem o banco real.
 
 Mobile, quando aplicável:
 
@@ -668,12 +669,34 @@ python -m scripts.recalcular_divergencias --conferencia-id 12   # limita (pode r
 - `--apply` grava em uma única transação; erro desfaz tudo;
 - idempotente.
 
+### SEC-01A — implementação concluída (migração real pendente)
+
+Fundação de autenticação:
+
+- `SECRET_KEY` e `DATABASE_URL` fora do código, lidas do ambiente (ver §7);
+- senhas em Argon2id; passlib/bcrypt removidos; dependências de autenticação declaradas em `backend/requirements.txt`;
+- JWT com `exp` e `sub` obrigatórios; usuário inexistente no token retorna "Token inválido";
+- `POST /notas/importar-xml` exige autenticação e `CONFERENTE` da mesma loja da conferência (401/403/404);
+- `GET /itens/` exige autenticação e segue o acesso de `GET /conferencia/{id}` (auditor: qualquer; conferente: própria loja);
+- coletor não registra mais token nem dados do usuário nos logs do login;
+- 190 testes passando, inclusive em instalação limpa a partir de `backend/requirements-dev.txt`.
+
+Migração de senhas — **ainda não executada no banco real**:
+
+- o caminho temporário de senha legada continua ativo no login até a migração real;
+- `backend/scripts/migrar_senhas.py` converte as senhas restantes; dry-run por padrão, `--apply` explícito, idempotente, uma transação, sem imprimir senhas, hashes ou usernames.
+
+```bash
+python -m scripts.migrar_senhas            # dry-run (padrão)
+python -m scripts.migrar_senhas --apply    # grava
+```
+
 O sistema continua em desenvolvimento.
 
 ## 31. Dívidas técnicas conhecidas
 
-1. `SECRET_KEY` do JWT está definida diretamente no código.
-2. Dependências do backend: `backend/requirements.txt` não declara `python-jose`, `passlib` e `bcrypt`, usados pelo código de autenticação. Revisar o arquivo e garantir que todas as dependências de produção estejam declaradas.
+1. ~~`SECRET_KEY` do JWT está definida diretamente no código.~~ **Resolvida no SEC-01A**: lida do ambiente (§7).
+2. ~~Dependências do backend: `backend/requirements.txt` não declara as bibliotecas de autenticação.~~ **Resolvida no SEC-01A**: `python-jose`, `argon2-cffi` e `python-dotenv` declaradas; passlib/bcrypt removidos; instalação limpa validada.
 3. O backend usa `create_all`; avaliar futuramente migrations formais.
 4. Performance da bipagem offline precisa de medição e otimização.
 5. Transferência/separação ainda está em evolução.
@@ -685,12 +708,16 @@ Registradas após o BACKEND-01.1 (não corrigidas):
 8. **Regras de estado / auditoria.** `POST /contagens/` e a sincronização aceitam escritas em `APROVADA` e `REPROVADA` (só bloqueiam `FINALIZADA`), permitindo alterar contagens após uma auditoria. O recálculo não grava divergências nesses status, então o GET pode exibir a divergência como não justificada enquanto o banco mantém a justificativa auditada. A solução futura deve bloquear essas escritas conforme as regras de estado. No mesmo tema: `fechar` só bloqueia `FINALIZADA` e a justificativa de divergência só bloqueia `FINALIZADA`.
 9. **Fluxo de aprovação.** `aprovar` valida pelas divergências persistidas e não recalcula. Revisar junto com as regras de estado (item 8).
 10. **Quantidade fracionada.** `ItemNF.quantidade` é texto e `Contagem`/`Divergencia` usam Integer. A regra de cálculo está centralizada e todos os fluxos usam a mesma comparação (`quantidade_persistida` arredonda meio para par ao gravar e comparar), mas o domínio ainda não representa quantidade fracionada adequadamente.
-11. **`DATABASE_URL` / configuração.** `backend/app/database/connection.py` tem a URL do banco com credenciais no código. Externalizar a configuração (ex.: variável de ambiente) sem credenciais acopladas ao código.
-12. **Importação de XML / segurança.** `POST /notas/importar-xml` não exige autenticação nem verifica perfil e estabelecimento. Revisar autenticação e isolamento.
+11. ~~**`DATABASE_URL` / configuração.**~~ **Resolvida no SEC-01A**: `DATABASE_URL` lida do ambiente (§7).
+12. ~~**Importação de XML / segurança.**~~ **Resolvida no SEC-01A**: `POST /notas/importar-xml` exige autenticação e `CONFERENTE` da mesma loja; `GET /itens/` também passou a exigir autenticação e isolamento por estabelecimento.
 13. **Script de recálculo legado.** A primeira execução real deve ser validada no PostgreSQL com dry-run. Recomenda-se janela sem operação para `--apply` (o script não bloqueia conferências contra escritas concorrentes).
 14. **Histórico de invalidação de justificativa.** Quando o recálculo invalida ou remove uma justificativa, não é registrado evento em `conferencia_historico` (o texto original permanece no evento `DIVERGENCIA_JUSTIFICADA`). Avaliar evento próprio, considerando o impacto na timeline do painel.
 15. **Unicidade de divergência.** Não há restrição única em `(conferencia_id, versao, codigo)` na tabela `divergencias`; o recálculo remove duplicatas da versão atual, mas o banco não as impede.
 16. **Envio de contagens pelo coletor.** O coletor ainda não envia contagens ao backend (nem `POST /contagens/` nem sincronização); somente lê a conferência e chama o fechamento.
+
+Registrada no SEC-01A (não resolvida):
+
+17. **Migração real das senhas.** Senhas legadas em texto puro podem continuar no banco até `python -m scripts.migrar_senhas --apply` ser executado no ambiente real (antes, conferir com dry-run). Depois de confirmar zero senhas legadas, remover o caminho temporário `_verificar_senha_legada_texto_puro_migracao` do login.
 
 ## 32. O que não fazer
 

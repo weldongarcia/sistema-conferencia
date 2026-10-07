@@ -1,9 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql://postgres:123456@localhost/conferencia"
+from app.core.config import configuracao
 
-engine = create_engine(DATABASE_URL)
+# Lida do ambiente (DATABASE_URL). Ver app/core/config.py.
+engine = create_engine(configuracao.database_url)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
