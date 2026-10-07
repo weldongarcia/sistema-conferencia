@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,7 +7,6 @@ from app.models.divergencia import Divergencia
 from app.models.conferencia import Conferencia
 
 from app.enums.conferencia_enums import (
-    TipoDivergencia,
     StatusConferencia
 )
 
@@ -18,6 +15,7 @@ from app.core.status import (
 )
 
 from app.services.conferencia_historico_service import registrar_historico
+from app.services.divergencia_service import calcular_comparacao
 from app.utils.codigo import normalizar_codigo
 
 
@@ -91,42 +89,6 @@ def comparar_conferencia(
     ).all()
 
     # ==========================================
-    # MAPA XML
-    # ==========================================
-
-    mapa_xml = defaultdict(float)
-    mapa_descricao = {}
-
-    for item in itens_nf:
-
-        codigo = normalizar_codigo(
-            item.codigo
-        )
-
-        mapa_xml[codigo] += float(
-            item.quantidade
-        )
-
-        if codigo not in mapa_descricao:
-            mapa_descricao[codigo] = item.descricao
-
-    # ==========================================
-    # MAPA CONTAGEM
-    # ==========================================
-
-    mapa_contagem = defaultdict(float)
-
-    for c in contagens:
-
-        codigo = normalizar_codigo(
-            c.codigo
-        )
-
-        mapa_contagem[codigo] += float(
-            c.quantidade
-        )
-
-    # ==========================================
     # BUSCAR DIVERGÊNCIAS DA VERSÃO ATUAL
     #
     # As versões anteriores permanecem preservadas.
@@ -150,71 +112,23 @@ def comparar_conferencia(
 
     resultado = []
 
-    codigos = (
-        set(mapa_xml.keys())
-        | set(mapa_contagem.keys())
-    )
-
     # ==========================================
     # COMPARAÇÃO
     # ==========================================
 
-    for codigo in codigos:
+    comparacao = calcular_comparacao(
+        itens_nf,
+        contagens
+    )
 
-        xml_qtd = mapa_xml.get(
-            codigo,
-            0
-        )
+    for item in comparacao:
 
-        cont_qtd = mapa_contagem.get(
-            codigo,
-            0
-        )
-
-        diferenca = cont_qtd - xml_qtd
-
-        # ======================================
-        # DETERMINAR DIVERGÊNCIA
-        # ======================================
-
-        tipo = None
-        origem = None
-
-        # ======================================
-        # PRODUTO NÃO EXISTE NA NF
-        # ======================================
-
-        if codigo not in mapa_xml:
-
-            tipo = TipoDivergencia.PRODUTO_A_MAIS
-            origem = "FORA_NOTA"
-
-        # ======================================
-        # PRODUTO DA NF NÃO FOI CONTADO
-        # ======================================
-
-        elif codigo not in mapa_contagem:
-
-            tipo = TipoDivergencia.PRODUTO_NAO_ENCONTRADO
-            origem = "NOTA"
-
-        # ======================================
-        # QUANTIDADE MENOR
-        # ======================================
-
-        elif diferenca < 0:
-
-            tipo = TipoDivergencia.QUANTIDADE_MENOR
-            origem = "NOTA"
-
-        # ======================================
-        # QUANTIDADE MAIOR
-        # ======================================
-
-        elif diferenca > 0:
-
-            tipo = TipoDivergencia.QUANTIDADE_MAIOR
-            origem = "NOTA"
+        codigo = item.codigo
+        xml_qtd = item.xml
+        cont_qtd = item.contado
+        diferenca = item.diferenca
+        tipo = item.tipo
+        origem = item.origem
 
         # ======================================
         # SEM DIVERGÊNCIA
@@ -234,7 +148,7 @@ def comparar_conferencia(
 
             resultado.append({
                 "codigo": codigo,
-                "descricao": mapa_descricao.get(codigo),
+                "descricao": item.descricao,
                 "xml": xml_qtd,
                 "contado": cont_qtd,
                 "diferenca": diferenca,
@@ -330,7 +244,7 @@ def comparar_conferencia(
 
         resultado.append({
             "codigo": codigo,
-            "descricao": mapa_descricao.get(codigo),
+            "descricao": item.descricao,
             "xml": xml_qtd,
             "contado": cont_qtd,
             "diferenca": diferenca,
