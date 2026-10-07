@@ -9,6 +9,7 @@ import ClipboardIcon from "../../components/ui/ClipboardIcon";
 import EmptyState from "../../components/ui/EmptyState";
 import PageLoading from "../../components/ui/PageLoading";
 import StatusBadge from "../../components/ui/StatusBadge";
+import { formatarDataHora } from "../../services/formatacao";
 
 import {
   buscarConferencias,
@@ -83,10 +84,6 @@ export default function DashboardPage() {
 
     carregar();
   }, [router]);
-
-  function formatarData(data: string) {
-    return new Date(data).toLocaleString("pt-BR");
-  }
 
   function contarStatus(status: string) {
     return conferencias.filter(
@@ -360,7 +357,7 @@ export default function DashboardPage() {
                           </td>
 
                           <td className="px-6 py-4 text-muted">
-                            {formatarData(conferencia.data_inicio)}
+                            {formatarDataHora(conferencia.data_inicio)}
                           </td>
 
                           <td className="px-6 py-4 text-right">

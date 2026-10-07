@@ -16,7 +16,10 @@ import {
   importarXml,
   ehSessaoExpirada,
 } from "../../../../services/api";
-import { formatarQuantidade } from "../../../../services/formatacao";
+import {
+  formatarDataHora,
+  formatarQuantidade,
+} from "../../../../services/formatacao";
 import {
   limparSessao,
   tratarSessaoExpirada,
@@ -1577,7 +1580,7 @@ export default function ConferenciaDetalhePage() {
 
                         {evento.data && (
                           <p className="shrink-0 text-xs text-muted">
-                            {new Date(evento.data).toLocaleString("pt-BR")}
+                            {formatarDataHora(evento.data)}
                           </p>
                         )}
                       </div>
