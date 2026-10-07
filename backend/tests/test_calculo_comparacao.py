@@ -134,30 +134,71 @@ def test_sem_dados():
 
 
 # ============================================================
-# COMPORTAMENTO ATUAL EM CASOS DE BORDA
-#
-# Registram a regra herdada do GET. Ver relatório do commit 2
-# sobre contagem zero.
+# REGRA ÚNICA: CONTAGEM 0 EQUIVALE A AUSÊNCIA DE CONTAGEM
 # ============================================================
 
-def test_atual_item_da_nf_com_contagem_zero_e_quantidade_menor():
-    (item,) = calcular_comparacao(
-        [nf("40001", 5)],
-        [cont("40001", 0)],
+@pytest.mark.parametrize(
+    ("itens_nf", "contagens", "tipo"),
+    [
+        # Item da NF sem contagem
+        ([nf("60001", 5)], [], TipoDivergencia.PRODUTO_NAO_ENCONTRADO),
+        # Item da NF com contagem 0
+        ([nf("60001", 5)], [cont("60001", 0)],
+         TipoDivergencia.PRODUTO_NAO_ENCONTRADO),
+        # Item da NF com contagem > 0 e menor que a NF
+        ([nf("60001", 5)], [cont("60001", 1)],
+         TipoDivergencia.QUANTIDADE_MENOR),
+        # Item da NF com contagem igual à NF
+        ([nf("60001", 5)], [cont("60001", 5)], None),
+        # Item da NF com contagem maior que a NF
+        ([nf("60001", 5)], [cont("60001", 6)],
+         TipoDivergencia.QUANTIDADE_MAIOR),
+        # Produto fora da NF com contagem > 0
+        ([], [cont("60001", 1)], TipoDivergencia.PRODUTO_A_MAIS),
+    ],
+    ids=[
+        "nf_sem_contagem",
+        "nf_contagem_zero",
+        "nf_contagem_menor",
+        "nf_contagem_igual",
+        "nf_contagem_maior",
+        "fora_nf_contagem_positiva",
+    ],
+)
+def test_regra_unica(itens_nf, contagens, tipo):
+    (item,) = calcular_comparacao(itens_nf, contagens)
+
+    assert item.tipo == tipo
+
+
+def test_nf_com_contagem_zero_igual_a_sem_contagem():
+    (com_zero,) = calcular_comparacao(
+        [nf("60002", 5)],
+        [cont("60002", 0)],
     )
 
-    assert item.tipo == TipoDivergencia.QUANTIDADE_MENOR
-
-
-def test_atual_produto_fora_da_nf_com_contagem_zero_e_divergente():
-    (item,) = calcular_comparacao(
+    (sem_contagem,) = calcular_comparacao(
+        [nf("60002", 5)],
         [],
-        [cont("40002", 0)],
     )
 
-    assert item.tipo == TipoDivergencia.PRODUTO_A_MAIS
-    assert item.diferenca == 0
+    assert com_zero == sem_contagem
 
+
+def test_produto_fora_da_nf_com_contagem_zero_nao_e_divergencia():
+    # Equivale a não ter sido contado: não aparece no resultado.
+    resultado = calcular_comparacao(
+        [nf("60003", 1)],
+        [cont("60003", 1), cont("60004", 0)],
+    )
+
+    assert [item.codigo for item in resultado] == ["60003"]
+    assert resultado[0].divergente is False
+
+
+# ============================================================
+# COMPORTAMENTO ATUAL MANTIDO
+# ============================================================
 
 def test_atual_quantidade_fracionada_mantida_como_float():
     (item,) = calcular_comparacao(
