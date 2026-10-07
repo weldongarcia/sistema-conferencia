@@ -8,6 +8,7 @@ from app.models.item_nf import ItemNF
 from app.models.conferencia import Conferencia
 
 from app.enums.conferencia_enums import StatusConferencia
+from app.services.divergencia_service import recalcular_divergencias
 from app.utils.codigo import normalizar_codigo
 
 
@@ -363,6 +364,15 @@ def importar_xml(db, file, conferencia_id):
         db.add(item)
 
         itens_processados.append(item)
+
+    # ==========================================================
+    # RECALCULAR DIVERGÊNCIAS DA VERSÃO ATUAL
+    # ==========================================================
+
+    recalcular_divergencias(
+        db,
+        conferencia
+    )
 
     # ==========================================================
     # COMMIT ÚNICO

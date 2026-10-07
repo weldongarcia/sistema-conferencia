@@ -278,8 +278,10 @@ def recalcular_divergencias(
       (versões finalizadas ou auditadas ficam intactas).
     - Invalida a justificativa somente quando a divergência
       muda materialmente.
-    - Não faz commit; executa flush para que consultas
-      seguintes na mesma sessão vejam o resultado.
+    - Não faz commit; executa flush antes de ler (para ver
+      contagens e itens pendentes do fluxo chamador) e depois
+      de gravar (para que consultas seguintes na mesma sessão
+      vejam o resultado).
     """
 
     versao = conferencia.versao
@@ -292,6 +294,8 @@ def recalcular_divergencias(
     if conferencia.status not in STATUS_RECALCULAVEIS:
         resumo.ignorado = True
         return resumo
+
+    db.flush()
 
     # ======================================================
     # DADOS

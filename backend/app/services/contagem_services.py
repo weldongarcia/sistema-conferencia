@@ -5,6 +5,7 @@ from app.models.conferencia import Conferencia
 from app.models.item_nf import ItemNF
 from app.models.contagem_historico import ContagemHistorico
 
+from app.services.divergencia_service import recalcular_divergencias
 from app.utils.codigo import normalizar_codigo
 
 
@@ -221,6 +222,11 @@ def criar_contagem(
             quantidade_nova
         )
 
+        recalcular_divergencias(
+            db,
+            conferencia
+        )
+
         db.commit()
 
         db.refresh(
@@ -266,6 +272,15 @@ def criar_contagem(
     )
 
     db.add(historico)
+
+    # ======================================================
+    # RECALCULAR DIVERGÊNCIAS DA VERSÃO ATUAL
+    # ======================================================
+
+    recalcular_divergencias(
+        db,
+        conferencia
+    )
 
     # ======================================================
     # COMMIT

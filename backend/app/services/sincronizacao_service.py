@@ -2,10 +2,9 @@ from fastapi import HTTPException
 
 from app.models.contagem import Contagem
 from app.models.conferencia import Conferencia
-from app.models.item_nf import ItemNF
-from app.models.divergencia import Divergencia
 from app.models.contagem_historico import ContagemHistorico
 
+from app.services.divergencia_service import recalcular_divergencias
 from app.utils.codigo import normalizar_codigo
 
 
@@ -217,206 +216,17 @@ def sincronizar_contagem(
             db.add(historico)
 
     # ==========================================================
-    # FLUSH
+    # RECALCULAR DIVERGÊNCIAS DA VERSÃO ATUAL
     #
-    # Garante que os UPDATE/INSERT anteriores sejam enviados
-    # para a sessão antes do recálculo das divergências.
+    # Mesma regra de calcular_comparacao. Considera as
+    # contagens criadas neste snapshot e não altera
+    # divergências de versões anteriores.
     # ==========================================================
 
-    db.flush()
-
-    # ==========================================================
-    # BUSCAR ITENS DA NF
-    # ==========================================================
-
-    itens_nf = (
-        db.query(ItemNF)
-        .filter(
-            ItemNF.conferencia_id
-            == conferencia_id
-        )
-        .all()
+    recalcular_divergencias(
+        db,
+        conferencia
     )
-
-    mapa_nf = {}
-
-    for item_nf in itens_nf:
-
-        codigo = normalizar_codigo(
-            item_nf.codigo
-        )
-
-        try:
-            quantidade_nf = int(
-                float(item_nf.quantidade)
-            )
-        except (
-            TypeError,
-            ValueError
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Quantidade inválida na NF "
-                    f"para o produto {codigo}."
-                )
-            )
-
-        mapa_nf[codigo] = quantidade_nf
-
-    # ==========================================================
-    # BUSCAR DIVERGÊNCIAS ATUAIS
-    # ==========================================================
-
-    divergencias = (
-        db.query(Divergencia)
-        .filter(
-            Divergencia.conferencia_id
-            == conferencia_id
-        )
-        .all()
-    )
-
-    mapa_divergencias = {
-        normalizar_codigo(divergencia.codigo): divergencia
-        for divergencia in divergencias
-    }
-
-    # ==========================================================
-    # RECALCULAR PRODUTOS DA NF
-    # ==========================================================
-
-    for codigo, quantidade_nf in mapa_nf.items():
-
-        contagem = mapa_contagens.get(codigo)
-
-        quantidade_contada = (
-            contagem.quantidade
-            if contagem
-            else 0
-        )
-
-        diferenca = (
-            quantidade_contada
-            - quantidade_nf
-        )
-
-        divergencia = mapa_divergencias.get(
-            codigo
-        )
-
-        # ------------------------------------------------------
-        # SEM DIVERGÊNCIA
-        # ------------------------------------------------------
-
-        if diferenca == 0:
-
-            if divergencia:
-
-                db.delete(
-                    divergencia
-                )
-
-            continue
-
-        # ------------------------------------------------------
-        # DETERMINAR TIPO
-        # ------------------------------------------------------
-
-        if diferenca > 0:
-            tipo = "QUANTIDADE_MAIOR"
-        else:
-            tipo = "QUANTIDADE_MENOR"
-
-        # ------------------------------------------------------
-        # ATUALIZAR DIVERGÊNCIA
-        # ------------------------------------------------------
-
-        if divergencia:
-
-            divergencia.xml = quantidade_nf
-            divergencia.contado = quantidade_contada
-            divergencia.diferenca = diferenca
-            divergencia.tipo = tipo
-            divergencia.versao = conferencia.versao
-
-        # ------------------------------------------------------
-        # CRIAR DIVERGÊNCIA
-        # ------------------------------------------------------
-
-        else:
-
-            divergencia = Divergencia(
-                conferencia_id=conferencia_id,
-                codigo=codigo,
-                xml=quantidade_nf,
-                contado=quantidade_contada,
-                diferenca=diferenca,
-                tipo=tipo,
-                origem="NOTA",
-                versao=conferencia.versao
-            )
-
-            db.add(divergencia)
-
-    # ==========================================================
-    # PRODUTOS FORA DA NF
-    # ==========================================================
-
-    for codigo, contagem in mapa_contagens.items():
-
-        if codigo in mapa_nf:
-            continue
-
-        quantidade_contada = (
-            contagem.quantidade
-        )
-
-        divergencia = mapa_divergencias.get(
-            codigo
-        )
-
-        # ------------------------------------------------------
-        # PRODUTO EXTRA COM QUANTIDADE ZERO
-        # ------------------------------------------------------
-
-        if quantidade_contada == 0:
-
-            if divergencia:
-
-                db.delete(
-                    divergencia
-                )
-
-            continue
-
-        # ------------------------------------------------------
-        # PRODUTO EXTRA
-        # ------------------------------------------------------
-
-        if divergencia:
-
-            divergencia.xml = 0
-            divergencia.contado = quantidade_contada
-            divergencia.diferenca = quantidade_contada
-            divergencia.tipo = "PRODUTO_A_MAIS"
-            divergencia.origem = "FORA_NOTA"
-            divergencia.versao = conferencia.versao
-
-        else:
-
-            divergencia = Divergencia(
-                conferencia_id=conferencia_id,
-                codigo=codigo,
-                xml=0,
-                contado=quantidade_contada,
-                diferenca=quantidade_contada,
-                tipo="PRODUTO_A_MAIS",
-                origem="FORA_NOTA",
-                versao=conferencia.versao
-            )
-
-            db.add(divergencia)
 
     # ==========================================================
     # COMMIT

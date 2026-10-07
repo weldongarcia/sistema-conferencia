@@ -15,7 +15,10 @@ from app.core.status import (
 )
 
 from app.services.conferencia_historico_service import registrar_historico
-from app.services.divergencia_service import calcular_comparacao
+from app.services.divergencia_service import (
+    calcular_comparacao,
+    recalcular_divergencias
+)
 from app.utils.codigo import normalizar_codigo
 
 
@@ -350,6 +353,26 @@ def fechar_conferencia(
         }
 
     # ==========================================
+    # RECALCULAR ANTES DE VALIDAR
+    #
+    # O fechamento decide sobre o estado real das
+    # contagens, sem depender de um GET anterior.
+    #
+    # O commit grava o recálculo mesmo quando o
+    # fechamento é bloqueado abaixo: as divergências
+    # pendentes precisam existir (com id) para serem
+    # justificadas.
+    # ==========================================
+
+    resumo = recalcular_divergencias(
+        db,
+        conferencia
+    )
+
+    if resumo.houve_alteracao:
+        db.commit()
+
+    # ==========================================
     # SOMENTE DIVERGÊNCIAS DA VERSÃO ATUAL
     # ==========================================
 
@@ -461,6 +484,21 @@ def reabrir_conferencia(
 
     conferencia.status = (
         StatusConferencia.REABERTA
+    )
+
+    # ======================================================
+    # DIVERGÊNCIAS DA NOVA VERSÃO
+    #
+    # Nascem sem justificativa. As da versão anterior
+    # permanecem intactas.
+    #
+    # Executado antes de registrar_historico, que faz o
+    # commit, para que tudo fique na mesma transação.
+    # ======================================================
+
+    recalcular_divergencias(
+        db,
+        conferencia
     )
 
     # ======================================================
