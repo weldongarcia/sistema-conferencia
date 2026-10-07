@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { login, buscarUsuarioAtual } from "../../services/api";
+import { limparSessao } from "../../services/sessao";
 
 export default function LoginPage() {
   const [usuario, setUsuario] = useState("");
@@ -45,18 +46,17 @@ export default function LoginPage() {
       const token = data?.access_token ?? data?.token ?? data?.accessToken;
 
       if (!token) {
-        console.log("Resposta completa do login:", data);
-
         throw new Error(
           "Login realizado, mas o token não foi encontrado na resposta.",
         );
       }
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("usuario", usuario.trim());
-
+      // A sessão só é gravada depois de confirmar o usuário,
+      // para não deixar token sem perfil no armazenamento.
       const usuarioAtual = await buscarUsuarioAtual(token);
 
+      localStorage.setItem("token", token);
+      localStorage.setItem("usuario", usuario.trim());
       localStorage.setItem("perfil", usuarioAtual.perfil);
 
       if (usuarioAtual.perfil === "AUDITOR") {
@@ -65,6 +65,8 @@ export default function LoginPage() {
         window.location.href = "/dashboard";
       }
     } catch (error) {
+      limparSessao();
+
       console.error(error);
 
       setErro(
