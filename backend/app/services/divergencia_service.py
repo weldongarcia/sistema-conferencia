@@ -242,6 +242,10 @@ class ResumoRecalculo:
     duplicadas_removidas: int = 0
     justificativas_invalidadas: int = 0
 
+    # Auditoria: não são alterações por si só.
+    justificativas_preservadas: int = 0
+    justificativas_removidas: int = 0
+
     @property
     def houve_alteracao(self) -> bool:
         return any((
@@ -250,6 +254,13 @@ class ResumoRecalculo:
             self.removidas,
             self.duplicadas_removidas,
         ))
+
+
+def _justificada(divergencia) -> bool:
+    return (
+        divergencia.justificativa_tipo is not None
+        or divergencia.justificativa_descricao is not None
+    )
 
 
 def escolher_divergencia(divergencias):
@@ -352,6 +363,9 @@ def recalcular_divergencias(
                 db.delete(duplicada)
                 resumo.duplicadas_removidas += 1
 
+                if _justificada(duplicada):
+                    resumo.justificativas_removidas += 1
+
     # ======================================================
     # REMOVER DIVERGÊNCIAS QUE DEIXARAM DE EXISTIR
     # ======================================================
@@ -363,6 +377,9 @@ def recalcular_divergencias(
         if item is None or not item.divergente:
             db.delete(divergencia)
             resumo.removidas += 1
+
+            if _justificada(divergencia):
+                resumo.justificativas_removidas += 1
 
     # ======================================================
     # CRIAR / ATUALIZAR
@@ -391,15 +408,16 @@ def recalcular_divergencias(
             continue
 
         if divergencia_corresponde(divergencia, item):
+
+            if _justificada(divergencia):
+                resumo.justificativas_preservadas += 1
+
             continue
 
         for campo, valor in valores.items():
             setattr(divergencia, campo, valor)
 
-        if (
-            divergencia.justificativa_tipo is not None
-            or divergencia.justificativa_descricao is not None
-        ):
+        if _justificada(divergencia):
             resumo.justificativas_invalidadas += 1
 
         divergencia.justificativa_tipo = None
