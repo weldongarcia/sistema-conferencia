@@ -14,6 +14,7 @@ import {
   reabrirConferencia,
   justificarDivergencia,
   importarXml,
+  ehSessaoExpirada,
 } from "../../../../services/api";
 import {
   limparSessao,
@@ -87,6 +88,36 @@ const TIPOS_JUSTIFICATIVA = [
   },
 ];
 
+/*
+ * Busca a timeline sem lançar erro, para que uma falha
+ * no histórico não bloqueie a tela da conferência.
+ */
+async function carregarTimeline(
+  token: string,
+  conferenciaId: number,
+): Promise<{
+  eventos: EventoTimeline[];
+  erro: string;
+  sessaoExpirada?: unknown;
+}> {
+  try {
+    const eventos = await buscarTimelineConferencia(token, conferenciaId);
+
+    return { eventos: Array.isArray(eventos) ? eventos : [], erro: "" };
+  } catch (error) {
+    if (ehSessaoExpirada(error)) {
+      return { eventos: [], erro: "", sessaoExpirada: error };
+    }
+
+    console.error(error);
+
+    return {
+      eventos: [],
+      erro: "Não foi possível carregar o histórico da conferência.",
+    };
+  }
+}
+
 export default function ConferenciaDetalhePage() {
   const params = useParams();
   const router = useRouter();
@@ -102,6 +133,10 @@ export default function ConferenciaDetalhePage() {
   const [carregando, setCarregando] = useState(true);
 
   const [erro, setErro] = useState("");
+
+  const [erroTimeline, setErroTimeline] = useState("");
+
+  const [erroAtualizacao, setErroAtualizacao] = useState("");
 
   const [erroFechamento, setErroFechamento] = useState("");
 
@@ -154,19 +189,25 @@ export default function ConferenciaDetalhePage() {
           throw new Error("ID da conferência inválido.");
         }
 
-        const [usuarioAtual, resultado, timelineAtualizada] = await Promise.all(
-          [
-            buscarUsuarioAtual(token),
-            buscarConferencia(token, conferenciaId),
-            buscarTimelineConferencia(token, conferenciaId),
-          ],
-        );
+        const [usuarioAtual, resultado] = await Promise.all([
+          buscarUsuarioAtual(token),
+          buscarConferencia(token, conferenciaId),
+        ]);
 
         setUsuario(usuarioAtual);
         setDados(resultado);
-        setTimeline(
-          Array.isArray(timelineAtualizada) ? timelineAtualizada : [],
-        );
+
+        // O histórico é secundário: uma falha nele não impede
+        // a abertura da conferência.
+        const historico = await carregarTimeline(token, conferenciaId);
+
+        if (historico.sessaoExpirada) {
+          tratarSessaoExpirada(historico.sessaoExpirada, router);
+          return;
+        }
+
+        setTimeline(historico.eventos);
+        setErroTimeline(historico.erro);
       } catch (error) {
         if (tratarSessaoExpirada(error, router)) return;
 
@@ -193,6 +234,13 @@ export default function ConferenciaDetalhePage() {
     }
   }
 
+  /*
+   * Recarrega a conferência após uma ação.
+   *
+   * Nunca lança erro: a ação já foi concluída no backend,
+   * então uma falha aqui não pode ser exibida como falha
+   * da ação.
+   */
   async function atualizarDados() {
     const token = localStorage.getItem("token");
 
@@ -201,14 +249,31 @@ export default function ConferenciaDetalhePage() {
       return;
     }
 
-    const [atualizado, timelineAtualizada] = await Promise.all([
-      buscarConferencia(token, conferenciaId),
-      buscarTimelineConferencia(token, conferenciaId),
-    ]);
+    setErroAtualizacao("");
 
-    setDados(atualizado);
+    try {
+      const atualizado = await buscarConferencia(token, conferenciaId);
 
-    setTimeline(Array.isArray(timelineAtualizada) ? timelineAtualizada : []);
+      setDados(atualizado);
+    } catch (error) {
+      if (tratarSessaoExpirada(error, router)) return;
+
+      console.error(error);
+
+      setErroAtualizacao(
+        "A operação foi concluída, mas não foi possível atualizar a tela. Recarregue a página.",
+      );
+    }
+
+    const historico = await carregarTimeline(token, conferenciaId);
+
+    if (historico.sessaoExpirada) {
+      tratarSessaoExpirada(historico.sessaoExpirada, router);
+      return;
+    }
+
+    setTimeline(historico.eventos);
+    setErroTimeline(historico.erro);
   }
 
   async function fechar() {
@@ -815,6 +880,12 @@ export default function ConferenciaDetalhePage() {
             </div>
           </div>
 
+          {erroAtualizacao && (
+            <div className="mt-4 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning-strong">
+              {erroAtualizacao}
+            </div>
+          )}
+
           {erroFechamento && (
             <div className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger">
               {erroFechamento}
@@ -1363,7 +1434,11 @@ export default function ConferenciaDetalhePage() {
 
           {mostrarHistorico && (
             <div className="mt-3 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
-              {timeline.length === 0 ? (
+              {erroTimeline ? (
+                <div className="px-6 py-10 text-center">
+                  <p className="text-sm text-danger">{erroTimeline}</p>
+                </div>
+              ) : timeline.length === 0 ? (
                 <div className="px-6 py-10 text-center">
                   <p className="text-sm text-muted">
                     Nenhum evento registrado.
