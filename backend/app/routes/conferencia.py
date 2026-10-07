@@ -240,9 +240,17 @@ def aprovar_conferencia(
 @router.post("/{conferencia_id}/reprovar")
 def reprovar_conferencia(
     conferencia_id: int,
+    motivo: str | None = Body(None),
     db: Session = Depends(get_db),
     usuario=Depends(get_current_user)
 ):
+    # --------------------------------------------------------
+    # MOTIVO
+    # Opcional na API para manter compatibilidade com
+    # clientes que não enviam corpo. O painel exige o motivo.
+    # --------------------------------------------------------
+
+    motivo = motivo.strip() if motivo and motivo.strip() else None
 
     exigir_perfil(
         usuario,
@@ -279,7 +287,8 @@ def reprovar_conferencia(
         conferencia_id=conferencia_id,
         usuario_id=usuario.id,
         acao="REPROVADA",
-        versao=conferencia.versao
+        versao=conferencia.versao,
+        motivo=motivo
     )
 
     db.commit()

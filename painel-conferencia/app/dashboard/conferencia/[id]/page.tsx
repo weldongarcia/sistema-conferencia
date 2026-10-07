@@ -142,7 +142,11 @@ export default function ConferenciaDetalhePage() {
 
   const [erroAuditoria, setErroAuditoria] = useState("");
 
-  const [processandoAuditoria, setProcessandoAuditoria] = useState(false);
+  const [acaoAuditoria, setAcaoAuditoria] = useState<
+    "aprovar" | "reprovar" | "reabrir" | null
+  >(null);
+
+  const processandoAuditoria = acaoAuditoria !== null;
 
   const [fechando, setFechando] = useState(false);
 
@@ -153,6 +157,10 @@ export default function ConferenciaDetalhePage() {
   const [abrirReabertura, setAbrirReabertura] = useState(false);
 
   const [motivoReabertura, setMotivoReabertura] = useState("");
+
+  const [abrirReprovacao, setAbrirReprovacao] = useState(false);
+
+  const [motivoReprovacao, setMotivoReprovacao] = useState("");
 
   const [justificativaAberta, setJustificativaAberta] = useState<number | null>(
     null,
@@ -358,7 +366,7 @@ export default function ConferenciaDetalhePage() {
     if (!confirmar) return;
 
     try {
-      setProcessandoAuditoria(true);
+      setAcaoAuditoria("aprovar");
       setErroAuditoria("");
 
       const token = localStorage.getItem("token");
@@ -382,22 +390,22 @@ export default function ConferenciaDetalhePage() {
           : "Não foi possível aprovar a conferência.",
       );
     } finally {
-      setProcessandoAuditoria(false);
+      setAcaoAuditoria(null);
     }
   }
 
   async function reprovar() {
     if (processandoAuditoria) return;
 
-    const confirmar = window.confirm(
-      "Deseja reprovar esta conferência?\n\n" +
-        "A conferência será marcada como REPROVADA.",
-    );
+    const motivo = motivoReprovacao.trim();
 
-    if (!confirmar) return;
+    if (!motivo) {
+      setErroAuditoria("Informe o motivo da reprovação.");
+      return;
+    }
 
     try {
-      setProcessandoAuditoria(true);
+      setAcaoAuditoria("reprovar");
       setErroAuditoria("");
 
       const token = localStorage.getItem("token");
@@ -407,7 +415,10 @@ export default function ConferenciaDetalhePage() {
         return;
       }
 
-      await reprovarConferencia(token, conferenciaId);
+      await reprovarConferencia(token, conferenciaId, motivo);
+
+      setMotivoReprovacao("");
+      setAbrirReprovacao(false);
 
       await atualizarDados();
     } catch (error) {
@@ -421,7 +432,7 @@ export default function ConferenciaDetalhePage() {
           : "Não foi possível reprovar a conferência.",
       );
     } finally {
-      setProcessandoAuditoria(false);
+      setAcaoAuditoria(null);
     }
   }
 
@@ -436,7 +447,7 @@ export default function ConferenciaDetalhePage() {
     }
 
     try {
-      setProcessandoAuditoria(true);
+      setAcaoAuditoria("reabrir");
       setErroAuditoria("");
 
       const token = localStorage.getItem("token");
@@ -463,7 +474,7 @@ export default function ConferenciaDetalhePage() {
           : "Não foi possível reabrir a conferência.",
       );
     } finally {
-      setProcessandoAuditoria(false);
+      setAcaoAuditoria(null);
     }
   }
 
@@ -609,6 +620,16 @@ export default function ConferenciaDetalhePage() {
 
   const podeReabrir =
     ehAuditor && (statusAtual === "FINALIZADA" || statusAtual === "REPROVADA");
+
+  // A timeline vem ordenada da mais recente para a mais antiga.
+  const motivoReprovacaoAtual =
+    statusAtual === "REPROVADA"
+      ? timeline.find(
+          (evento) =>
+            evento.evento === "Conferência reprovada" &&
+            evento.versao === dados.versao,
+        )?.motivo ?? null
+      : null;
   const conferidos = dados.itens.filter((item) => item.contado > 0).length;
 
   const corretos = dados.itens.filter(
@@ -776,6 +797,29 @@ export default function ConferenciaDetalhePage() {
         )}
 
         {/* ===================================================
+            AVISO DE REPROVAÇÃO
+        ==================================================== */}
+
+        {statusAtual === "REPROVADA" && (
+          <div className="mb-6 rounded-2xl border border-danger/30 bg-danger-soft p-5">
+            <p className="font-semibold text-danger">Conferência reprovada</p>
+
+            {motivoReprovacaoAtual && (
+              <p className="mt-1 text-sm text-danger">
+                <strong className="font-semibold">Motivo:</strong>{" "}
+                {motivoReprovacaoAtual}
+              </p>
+            )}
+
+            <p className="mt-1 text-sm text-danger">
+              {ehAuditor
+                ? "Reabra a conferência para permitir uma nova contagem."
+                : "Aguarde a reabertura pelo auditor para realizar uma nova contagem."}
+            </p>
+          </div>
+        )}
+
+        {/* ===================================================
             AÇÕES
         ==================================================== */}
 
@@ -847,8 +891,8 @@ export default function ConferenciaDetalhePage() {
                     "disabled:cursor-not-allowed disabled:opacity-60",
                   ].join(" ")}
                 >
-                  {processandoAuditoria
-                    ? "Processando..."
+                  {acaoAuditoria === "aprovar"
+                    ? "Aprovando..."
                     : divergenciasPendentes > 0
                       ? `Aprovar (${divergenciasPendentes} pendente${divergenciasPendentes > 1 ? "s" : ""})`
                       : "Aprovar"}
@@ -857,11 +901,15 @@ export default function ConferenciaDetalhePage() {
 
               {podeAuditar && (
                 <button
-                  onClick={reprovar}
+                  onClick={() => {
+                    setErroAuditoria("");
+                    setAbrirReabertura(false);
+                    setAbrirReprovacao(true);
+                  }}
                   disabled={processandoAuditoria}
                   className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-danger-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {processandoAuditoria ? "Processando..." : "Reprovar"}
+                  Reprovar
                 </button>
               )}
 
@@ -869,6 +917,7 @@ export default function ConferenciaDetalhePage() {
                 <button
                   onClick={() => {
                     setErroAuditoria("");
+                    setAbrirReprovacao(false);
                     setAbrirReabertura(true);
                   }}
                   disabled={processandoAuditoria}
@@ -951,7 +1000,57 @@ export default function ConferenciaDetalhePage() {
                 disabled={processandoAuditoria}
                 className="rounded-xl bg-attention px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-attention-strong disabled:opacity-50"
               >
-                {processandoAuditoria ? "Reabrindo..." : "Confirmar reabertura"}
+                {acaoAuditoria === "reabrir"
+                  ? "Reabrindo..."
+                  : "Confirmar reabertura"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================
+            FORMULÁRIO DE REPROVAÇÃO
+        ==================================================== */}
+
+        {abrirReprovacao && podeAuditar && (
+          <div className="mb-6 rounded-2xl border border-danger/30 bg-white p-6 shadow-card">
+            <h3 className="font-semibold text-danger">Reprovar conferência</h3>
+
+            <p className="mt-1 text-sm text-danger">
+              Informe obrigatoriamente o motivo da reprovação. Essa informação
+              ficará registrada no histórico.
+            </p>
+
+            <textarea
+              value={motivoReprovacao}
+              onChange={(event) => setMotivoReprovacao(event.target.value)}
+              placeholder="Ex.: Contagem inconsistente com a nota. Necessário recontar os itens divergentes."
+              rows={4}
+              disabled={processandoAuditoria}
+              className="mt-4 w-full rounded-xl border border-line bg-canvas px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-danger focus:ring-2 focus:ring-danger/15 disabled:opacity-50"
+            />
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setAbrirReprovacao(false);
+                  setMotivoReprovacao("");
+                  setErroAuditoria("");
+                }}
+                disabled={processandoAuditoria}
+                className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-brand transition hover:bg-canvas disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={reprovar}
+                disabled={processandoAuditoria}
+                className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-danger-hover disabled:opacity-50"
+              >
+                {acaoAuditoria === "reprovar"
+                  ? "Reprovando..."
+                  : "Confirmar reprovação"}
               </button>
             </div>
           </div>

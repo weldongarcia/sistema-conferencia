@@ -223,11 +223,12 @@ export async function aprovarConferencia(
 
 export async function reprovarConferencia(
   token: string,
-  conferenciaId: number
+  conferenciaId: number,
+  motivo: string
 ) {
   return requisicao(
     `/conferencia/${conferenciaId}/reprovar`,
-    { method: "POST", token },
+    { method: "POST", token, json: motivo },
     "Erro ao reprovar conferência",
   );
 }
