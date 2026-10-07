@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Testes automatizados do backend.
+# Não instalar em produção.
+pytest==9.1.1
+httpx==0.28.1
