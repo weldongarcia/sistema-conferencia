@@ -6,6 +6,10 @@ from app.models.item_nf import ItemNF
 from app.models.contagem_historico import ContagemHistorico
 
 from app.services.divergencia_service import recalcular_divergencias
+from app.services.estado_conferencia import (
+    Operacao,
+    exigir_operacao_permitida
+)
 from app.utils.codigo import normalizar_codigo
 
 
@@ -94,12 +98,10 @@ def criar_contagem(
     # VERIFICAR STATUS
     # ======================================================
 
-    if conferencia.status == "FINALIZADA":
-
-        raise HTTPException(
-            400,
-            "Conferência finalizada"
-        )
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.CONTAGEM
+    )
 
     # ======================================================
     # VERIFICAR SE O PRODUTO EXISTE NA NF

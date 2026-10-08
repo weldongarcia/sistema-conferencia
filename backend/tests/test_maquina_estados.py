@@ -56,20 +56,6 @@ ESTADOS = [
     S.REABERTA,
 ]
 
-# Combinações em que o código anterior ao BACKEND-02A diverge da regra.
-# Removidas à medida que as correções entram.
-VIOLACOES_CONHECIDAS = {
-    (estado, operacao)
-    for estado in (S.EM_CONFERENCIA, S.EM_AUDITORIA, S.APROVADA, S.REPROVADA)
-    for operacao in (
-        "contagem",
-        "sincronizar_conferencias",
-        "sincronizar_contagens",
-        "justificar",
-        "fechar",
-    )
-} | {(S.FINALIZADA, "fechar")}
-
 
 # ============================================================
 # DADOS
@@ -287,18 +273,9 @@ def verificar_efeito_permitido(db, operacao, conferencia, status, versao):
 def _casos():
     for status in ESTADOS:
         for operacao in PERMITIDAS:
-            marcas = []
-
-            if (status, operacao) in VIOLACOES_CONHECIDAS:
-                marcas.append(pytest.mark.xfail(
-                    strict=True,
-                    reason="violação conhecida antes do BACKEND-02A",
-                ))
-
             yield pytest.param(
                 status,
                 operacao,
-                marks=marcas,
                 id=f"{status.value}-{operacao}",
             )
 
@@ -334,7 +311,6 @@ def test_matriz_estado_operacao(
 # CENÁRIOS DE FLUXO
 # ============================================================
 
-@pytest.mark.xfail(strict=True, reason="violação conhecida antes do BACKEND-02A")
 def test_aprovada_e_imutavel(
     client_autenticado, db, fabrica, conferente, auditor
 ):
@@ -354,7 +330,6 @@ def test_aprovada_e_imutavel(
     assert estado_atual(db, conferencia).status == S.APROVADA
 
 
-@pytest.mark.xfail(strict=True, reason="violação conhecida antes do BACKEND-02A")
 def test_reprovada_exige_reabertura(
     client_autenticado, db, fabrica, conferente, auditor
 ):

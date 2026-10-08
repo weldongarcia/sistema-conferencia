@@ -11,7 +11,10 @@ from app.utils.auth import get_current_user
 from app.core.perfis import CONFERENTE
 from app.core.security import exigir_perfil
 
-from app.enums.conferencia_enums import StatusConferencia
+from app.services.estado_conferencia import (
+    Operacao,
+    exigir_operacao_permitida
+)
 
 from app.schemas.divergencia import JustificarDivergencia
 
@@ -167,20 +170,13 @@ def justificar_divergencia(
         )
 
     # ========================================================
-    # CONFERÊNCIA NÃO PODE ESTAR FINALIZADA
+    # SOMENTE ESTADOS EDITÁVEIS (RASCUNHO, REABERTA)
     # ========================================================
 
-    if (
-        conferencia.status
-        == StatusConferencia.FINALIZADA
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Não é possível justificar divergência "
-                "de uma conferência finalizada."
-            )
-        )
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.JUSTIFICAR
+    )
 
     # ========================================================
     # VALIDAR TIPO

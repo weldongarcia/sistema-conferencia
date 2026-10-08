@@ -5,6 +5,10 @@ from app.models.conferencia import Conferencia
 from app.models.contagem_historico import ContagemHistorico
 
 from app.services.divergencia_service import recalcular_divergencias
+from app.services.estado_conferencia import (
+    Operacao,
+    exigir_operacao_permitida
+)
 from app.utils.codigo import normalizar_codigo
 
 
@@ -63,11 +67,12 @@ def sincronizar_contagem(
     # VERIFICAR STATUS
     # ==========================================================
 
-    if conferencia.status == "FINALIZADA":
-        raise HTTPException(
-            status_code=400,
-            detail="Conferência finalizada."
-        )
+    # Mesma regra para /conferencias/{id}/sincronizar e
+    # /contagens/sincronizar/{id}: ambas usam este service.
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.SINCRONIZACAO
+    )
 
     # ==========================================================
     # MONTAR SNAPSHOT RECEBIDO

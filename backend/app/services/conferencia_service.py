@@ -12,10 +12,6 @@ from app.enums.conferencia_enums import (
     StatusConferencia
 )
 
-from app.core.status import (
-    STATUS_FINALIZADA
-)
-
 from app.services.conferencia_historico_service import registrar_historico
 from app.services.estado_conferencia import (
     Operacao,
@@ -287,11 +283,12 @@ def fechar_conferencia(
             "Conferência não encontrada"
         )
 
-    if conferencia.status == STATUS_FINALIZADA:
-
-        return {
-            "msg": "Conferência já está finalizada"
-        }
+    # Somente RASCUNHO e REABERTA. APROVADA e REPROVADA não voltam
+    # para FINALIZADA; FINALIZADA não é fechada de novo.
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.FECHAR
+    )
 
     # ==========================================
     # RECALCULAR ANTES DE VALIDAR
