@@ -285,8 +285,11 @@ def app_autenticado(SessionTeste, monkeypatch):
     import app.utils.auth as auth_util
 
     from app.routes import auth as rota_auth
+    from app.routes import contagens as rota_contagens
+    from app.routes import divergencias as rota_divergencias
     from app.routes import itens as rota_itens
     from app.routes import notas as rota_notas
+    from app.routes import sincronizacao as rota_sincronizacao
     from app.routes import usuario as rota_usuario
 
     # get_current_user abre a própria sessão via SessionLocal.
@@ -300,6 +303,9 @@ def app_autenticado(SessionTeste, monkeypatch):
         rota_conferencia,
         rota_notas,
         rota_itens,
+        rota_contagens,
+        rota_sincronizacao,
+        rota_divergencias,
     ):
         app.include_router(rota.router)
 
@@ -315,6 +321,9 @@ def app_autenticado(SessionTeste, monkeypatch):
         conexao.get_db,
         rota_conferencia.get_db,
         rota_notas.get_db,
+        rota_contagens.get_db,
+        rota_sincronizacao.get_db,
+        rota_divergencias.get_db,
     ):
         app.dependency_overrides[dependencia] = get_db_teste
 
