@@ -59,7 +59,6 @@ def status_de(db, conferencia):
 # APROVAÇÃO RECALCULA ANTES DE VALIDAR
 # ============================================================
 
-@pytest.mark.xfail(strict=True, reason="aprovação usava divergências gravadas")
 def test_aprovacao_recusa_divergencia_justificada_desatualizada(
     client_autenticado, db, fabrica, auditor
 ):
@@ -87,7 +86,6 @@ def test_aprovacao_recusa_divergencia_justificada_desatualizada(
     assert status_de(db, conferencia) == S.FINALIZADA
 
 
-@pytest.mark.xfail(strict=True, reason="aprovação usava divergências gravadas")
 def test_aprovacao_recusa_divergencia_nao_registrada(
     client_autenticado, db, fabrica, auditor
 ):
@@ -105,7 +103,6 @@ def test_aprovacao_recusa_divergencia_nao_registrada(
     assert status_de(db, conferencia) == S.FINALIZADA
 
 
-@pytest.mark.xfail(strict=True, reason="aprovação usava divergências gravadas")
 def test_aprovacao_descarta_divergencia_obsoleta(
     client_autenticado, db, fabrica, auditor
 ):

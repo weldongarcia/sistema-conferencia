@@ -278,15 +278,18 @@ def escolher_divergencia(divergencias):
 
 def recalcular_divergencias(
     db: Session,
-    conferencia: Conferencia
+    conferencia: Conferencia,
+    estados_permitidos=STATUS_RECALCULAVEIS
 ) -> ResumoRecalculo:
     """
     Sincroniza as divergências gravadas da versão atual com o
     cálculo de calcular_comparacao.
 
     - Atua somente na versão atual da conferência.
-    - Não grava em status fora de STATUS_RECALCULAVEIS
-      (versões finalizadas ou auditadas ficam intactas).
+    - Não grava em status fora de estados_permitidos (padrão:
+      STATUS_RECALCULAVEIS; versões finalizadas ou auditadas
+      ficam intactas). A aprovação passa explicitamente
+      FINALIZADA para validar a versão antes de aprová-la.
     - Invalida a justificativa somente quando a divergência
       muda materialmente.
     - Não faz commit; executa flush antes de ler (para ver
@@ -302,7 +305,7 @@ def recalcular_divergencias(
         versao=versao,
     )
 
-    if conferencia.status not in STATUS_RECALCULAVEIS:
+    if conferencia.status not in estados_permitidos:
         resumo.ignorado = True
         return resumo
 

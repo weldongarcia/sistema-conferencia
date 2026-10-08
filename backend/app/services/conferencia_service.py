@@ -26,6 +26,12 @@ from app.services.divergencia_service import (
 from app.utils.codigo import normalizar_codigo
 
 
+# A aprovação recalcula a versão FINALIZADA antes de validar.
+ESTADOS_RECALCULO_APROVACAO = frozenset({
+    StatusConferencia.FINALIZADA,
+})
+
+
 # ==========================================================
 # COMPARAR CONFERÊNCIA
 # ==========================================================
@@ -502,6 +508,23 @@ def aprovar_conferencia(
     )
 
     # ==========================================
+    # RECALCULAR ANTES DE VALIDAR
+    #
+    # A aprovação não confia nas divergências
+    # gravadas: recalcula a versão em auditoria na
+    # mesma transação. Se ficar pendência, a
+    # transação é desfeita e nada é gravado; a
+    # conferência continua FINALIZADA e precisa ser
+    # reaberta para correção.
+    # ==========================================
+
+    recalcular_divergencias(
+        db,
+        conferencia,
+        estados_permitidos=ESTADOS_RECALCULO_APROVACAO
+    )
+
+    # ==========================================
     # DIVERGÊNCIAS DA VERSÃO ATUAL
     # ==========================================
 
@@ -518,6 +541,8 @@ def aprovar_conferencia(
     # ==========================================
 
     if divergencias_sem_justificativa > 0:
+
+        db.rollback()
 
         raise HTTPException(
             400,
