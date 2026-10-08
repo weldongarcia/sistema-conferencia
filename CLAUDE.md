@@ -143,7 +143,7 @@ O enum também contém `EM_CONFERENCIA` e `EM_AUDITORIA`, que não são atribuí
 
 ### Máquina de estados (BACKEND-02A)
 
-Fonte única: `backend/app/services/estado_conferencia.py` (`ESTADOS_PERMITIDOS` e `exigir_operacao_permitida`). Toda operação que altera a conferência chama `exigir_operacao_permitida` antes de gravar; operação não permitida responde **400** sem alterar o banco. Não espalhar verificações de status pelos endpoints.
+Fonte única: `backend/app/services/estado_conferencia.py` (`ESTADOS_PERMITIDOS` e `exigir_operacao_permitida`). Toda operação HTTP de escrita da conferência chama `exigir_operacao_permitida` antes de gravar; operação não permitida responde **400** sem alterar o banco. Não espalhar verificações de status pelos endpoints.
 
 | Operação | Estados permitidos | Perfil |
 |---|---|---|
@@ -161,7 +161,8 @@ Fonte única: `backend/app/services/estado_conferencia.py` (`ESTADOS_PERMITIDOS`
 - `APROVADA` é **final e imutável**: nenhuma operação é permitida, inclusive reabrir.
 - `REPROVADA` não aceita correção direta: o fluxo é `REPROVADA → reabrir → REABERTA → corrigir → fechar`.
 - Qualquer conferente da mesma loja pode operar a conferência (`conferencia.usuario_id` não é verificado).
-- As escritas obtêm a conferência por `buscar_conferencia_para_alteracao` (`SELECT … FOR UPDATE`). O efeito da trava só existe no PostgreSQL; o SQLite dos testes a ignora.
+- As operações HTTP de escrita obtêm a conferência por `buscar_conferencia_para_alteracao` (`SELECT … FOR UPDATE`). O efeito da trava só existe no PostgreSQL; o SQLite dos testes a ignora.
+- Exceção operacional: o script `backend/scripts/recalcular_divergencias.py` não usa a regra central nem a trava; tem restrição própria (somente `RASCUNHO` e `REABERTA`). Continua sendo dívida operacional e deve ser executado somente em janela sem operações concorrentes.
 
 Consultar `backend/app/enums/conferencia_enums.py` antes de alterar transições.
 
@@ -271,7 +272,9 @@ As divergências gravadas são mantidas somente por `recalcular_divergencias`, c
 `recalcular_divergencias`:
 
 - atua somente na versão atual;
-- não grava em `FINALIZADA`, `APROVADA` ou `REPROVADA`;
+- no uso normal grava somente nos estados editáveis do fluxo (`RASCUNHO`, `REABERTA`);
+- a aprovação solicita explicitamente o recálculo da versão `FINALIZADA` antes de validar e aprovar (parâmetro `estados_permitidos`);
+- nunca grava em `APROVADA` ou `REPROVADA`, que continuam imutáveis;
 - não faz commit próprio (o fluxo chamador controla a transação).
 
 `GET /conferencia/{id}` é somente leitura: calcula na hora e exibe as divergências gravadas da versão atual. Não criar, atualizar ou remover divergências em operações de leitura.
