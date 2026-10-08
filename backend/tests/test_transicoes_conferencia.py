@@ -203,7 +203,6 @@ def test_reprovacao_grava_motivo_sem_espacos(
 # HISTÓRICO E ATOMICIDADE
 # ============================================================
 
-@pytest.mark.xfail(strict=True, reason="registrar_historico fazia commit")
 def test_registrar_historico_nao_faz_commit(db, fabrica):
     usuario = fabrica.usuario()
     conferencia = fabrica.conferencia()
@@ -270,7 +269,6 @@ def _chamar_service(transicao, db, conferencia, usuario):
     raise AssertionError(transicao)
 
 
-@pytest.mark.xfail(strict=True, reason="histórico era confirmado à parte")
 @pytest.mark.parametrize(
     "transicao", ["fechar", "aprovar", "reprovar", "reabrir"]
 )

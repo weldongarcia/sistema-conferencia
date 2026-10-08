@@ -18,7 +18,8 @@ def registrar_historico(
         motivo=motivo
     )
 
+    # Sem commit: o service chamador confirma o histórico junto com
+    # a alteração principal, na mesma transação.
     db.add(historico)
-    db.commit()
 
     return historico

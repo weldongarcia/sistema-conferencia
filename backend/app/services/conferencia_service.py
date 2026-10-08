@@ -302,19 +302,14 @@ def fechar_conferencia(
     # O fechamento decide sobre o estado real das
     # contagens, sem depender de um GET anterior.
     #
-    # O commit grava o recálculo mesmo quando o
-    # fechamento é bloqueado abaixo: as divergências
-    # pendentes precisam existir (com id) para serem
-    # justificadas.
+    # Fechamento bem-sucedido: recálculo, status e
+    # histórico são confirmados juntos no commit final.
     # ==========================================
 
     resumo = recalcular_divergencias(
         db,
         conferencia
     )
-
-    if resumo.houve_alteracao:
-        db.commit()
 
     # ==========================================
     # SOMENTE DIVERGÊNCIAS DA VERSÃO ATUAL
@@ -329,6 +324,12 @@ def fechar_conferencia(
     ).count()
 
     if divergencias_sem_justificativa > 0:
+
+        # Fechamento recusado: grava somente o recálculo,
+        # para que as pendências existam (com id) e possam
+        # ser justificadas. Nenhum histórico é gravado.
+        if resumo.houve_alteracao:
+            db.commit()
 
         raise HTTPException(
             400,
@@ -428,8 +429,8 @@ def reabrir_conferencia(
     # Nascem sem justificativa. As da versão anterior
     # permanecem intactas.
     #
-    # Executado antes de registrar_historico, que faz o
-    # commit, para que tudo fique na mesma transação.
+    # Versão, status, divergências e histórico são
+    # confirmados juntos no commit abaixo.
     # ======================================================
 
     recalcular_divergencias(
