@@ -139,6 +139,30 @@ Estados importantes incluem:
 - `APROVADA`
 - `REPROVADA`
 
+O enum também contém `EM_CONFERENCIA` e `EM_AUDITORIA`, que não são atribuídos por nenhum fluxo e não permitem nenhuma operação. Não remover do enum (tipo nativo no PostgreSQL, sem migrations).
+
+### Máquina de estados (BACKEND-02A)
+
+Fonte única: `backend/app/services/estado_conferencia.py` (`ESTADOS_PERMITIDOS` e `exigir_operacao_permitida`). Toda operação que altera a conferência chama `exigir_operacao_permitida` antes de gravar; operação não permitida responde **400** sem alterar o banco. Não espalhar verificações de status pelos endpoints.
+
+| Operação | Estados permitidos | Perfil |
+|---|---|---|
+| Contagem (`POST /contagens/`) | `RASCUNHO`, `REABERTA` | CONFERENTE da loja |
+| Sincronização (as duas rotas) | `RASCUNHO`, `REABERTA` | CONFERENTE da loja |
+| Justificar divergência | `RASCUNHO`, `REABERTA` | CONFERENTE da loja |
+| Fechar | `RASCUNHO`, `REABERTA` → `FINALIZADA` | CONFERENTE da loja |
+| Importar XML | `RASCUNHO`, `REABERTA` | CONFERENTE da loja |
+| Aprovar | `FINALIZADA` → `APROVADA` | AUDITOR (global) |
+| Reprovar | `FINALIZADA` → `REPROVADA` | AUDITOR (global) |
+| Reabrir | `FINALIZADA`, `REPROVADA` → `REABERTA` (nova versão) | AUDITOR (global) |
+
+- Somente `RASCUNHO` e `REABERTA` são editáveis.
+- `FINALIZADA` está pronta para auditoria: o conferente não altera nem fecha de novo.
+- `APROVADA` é **final e imutável**: nenhuma operação é permitida, inclusive reabrir.
+- `REPROVADA` não aceita correção direta: o fluxo é `REPROVADA → reabrir → REABERTA → corrigir → fechar`.
+- Qualquer conferente da mesma loja pode operar a conferência (`conferencia.usuario_id` não é verificado).
+- As escritas obtêm a conferência por `buscar_conferencia_para_alteracao` (`SELECT … FOR UPDATE`). O efeito da trava só existe no PostgreSQL; o SQLite dos testes a ignora.
+
 Consultar `backend/app/enums/conferencia_enums.py` antes de alterar transições.
 
 ## 9. Fluxo de conferência
@@ -155,9 +179,11 @@ Fluxo atual:
 8. Justificar divergências quando necessário.
 9. Finalizar.
 10. Auditor analisar.
-11. Aprovar ou reprovar conforme regras.
-12. Reabrir quando permitido, mediante motivo.
+11. Aprovar ou reprovar conforme regras. A aprovação recalcula as divergências da versão antes de validar; a reprovação exige motivo.
+12. Reabrir quando permitido (`FINALIZADA` ou `REPROVADA`), mediante motivo.
 13. Reabertura cria nova versão e preserva histórico.
+
+`APROVADA` encerra o fluxo; não há reabertura de conferência aprovada.
 
 Não alterar esse fluxo sem avaliar auditoria e rastreabilidade.
 
@@ -275,6 +301,8 @@ Operações relevantes devem preservar:
 - motivo, quando aplicável.
 
 Reabertura incrementa a versão e a quantidade de reaberturas e registra motivo no histórico.
+
+`registrar_historico` não faz commit: o service confirma o evento junto com a alteração principal, na mesma transação. Uma falha depois do histórico desfaz toda a transição. Exceção intencional: o fechamento recusado por pendências confirma apenas o recálculo das divergências (sem histórico), para que elas possam ser justificadas.
 
 Não apagar histórico para simplificar interface ou correção.
 
@@ -691,6 +719,16 @@ python -m scripts.migrar_senhas            # dry-run (padrão)
 python -m scripts.migrar_senhas --apply    # grava
 ```
 
+### BACKEND-02A — máquina de estados e integridade pós-auditoria
+
+- Regras de estado centralizadas em `estado_conferencia.py` (ver §8); a regra antiga "status diferente de FINALIZADA" foi eliminada.
+- `APROVADA` e `REPROVADA` não aceitam mais contagem, sincronização, justificativa nem fechamento; `fechar` não leva mais `APROVADA`/`REPROVADA` de volta a `FINALIZADA`. Fechar uma `FINALIZADA` responde 400 (antes 200).
+- Aprovação recalcula as divergências da versão `FINALIZADA` na mesma transação; havendo pendência, nada é gravado e a resposta é 400.
+- Reprovação em `conferencia_service.reprovar_conferencia`, com motivo obrigatório (400 se ausente, vazio ou só espaços).
+- Histórico confirmado na mesma transação da operação; trava `FOR UPDATE` nas operações de escrita.
+- Histórico da justificativa grava `Tipo: VALOR` (antes `Tipo: TipoJustificativa.VALOR`).
+- Testes: matriz completa estado × operação pelas rotas HTTP (`test_maquina_estados.py`), transições (`test_transicoes_conferencia.py`) e tabela central (`test_estado_conferencia.py`).
+
 O sistema continua em desenvolvimento.
 
 ## 31. Dívidas técnicas conhecidas
@@ -705,8 +743,8 @@ O sistema continua em desenvolvimento.
 
 Registradas após o BACKEND-01.1 (não corrigidas):
 
-8. **Regras de estado / auditoria.** `POST /contagens/` e a sincronização aceitam escritas em `APROVADA` e `REPROVADA` (só bloqueiam `FINALIZADA`), permitindo alterar contagens após uma auditoria. O recálculo não grava divergências nesses status, então o GET pode exibir a divergência como não justificada enquanto o banco mantém a justificativa auditada. A solução futura deve bloquear essas escritas conforme as regras de estado. No mesmo tema: `fechar` só bloqueia `FINALIZADA` e a justificativa de divergência só bloqueia `FINALIZADA`.
-9. **Fluxo de aprovação.** `aprovar` valida pelas divergências persistidas e não recalcula. Revisar junto com as regras de estado (item 8).
+8. ~~**Regras de estado / auditoria.**~~ **Resolvida no BACKEND-02A**: escritas somente em `RASCUNHO`/`REABERTA`; `APROVADA` e `REPROVADA` bloqueadas (§8). Dados alterados após auditoria **antes** do BACKEND-02A não foram corrigidos retroativamente.
+9. ~~**Fluxo de aprovação.**~~ **Resolvida no BACKEND-02A**: a aprovação recalcula as divergências antes de validar.
 10. **Quantidade fracionada.** `ItemNF.quantidade` é texto e `Contagem`/`Divergencia` usam Integer. A regra de cálculo está centralizada e todos os fluxos usam a mesma comparação (`quantidade_persistida` arredonda meio para par ao gravar e comparar), mas o domínio ainda não representa quantidade fracionada adequadamente.
 11. ~~**`DATABASE_URL` / configuração.**~~ **Resolvida no SEC-01A**: `DATABASE_URL` lida do ambiente (§7).
 12. ~~**Importação de XML / segurança.**~~ **Resolvida no SEC-01A**: `POST /notas/importar-xml` exige autenticação e `CONFERENTE` da mesma loja; `GET /itens/` também passou a exigir autenticação e isolamento por estabelecimento.
@@ -718,6 +756,13 @@ Registradas após o BACKEND-01.1 (não corrigidas):
 Registrada no SEC-01A (não resolvida):
 
 17. **Migração real das senhas.** Senhas legadas em texto puro podem continuar no banco até `python -m scripts.migrar_senhas --apply` ser executado no ambiente real (antes, conferir com dry-run). Depois de confirmar zero senhas legadas, remover o caminho temporário `_verificar_senha_legada_texto_puro_migracao` do login.
+
+Registradas no BACKEND-02A para o BACKEND-02B (não resolvidas; 18 a 20 exigem mudança de schema):
+
+18. **Contagens sem versão.** `contagens` guarda só o valor atual e passa de uma versão para a outra; a versão auditada não pode ser reconstruída apenas pelos dados gravados (depende de `contagens_historico` filtrado pela data do evento de aprovação). Opções avaliadas: versão em `contagens` ou foto imutável da versão.
+19. **Histórico sem estado anterior/novo.** `conferencia_historico` registra a ação e a versão, mas não o estado de origem.
+20. **Operações sem histórico.** Criação da conferência, importação de XML e alterações de divergência pelo recálculo não geram evento.
+21. **Concorrência validada só no PostgreSQL.** A trava `FOR UPDATE` é ignorada pelo SQLite; falta teste de integração em PostgreSQL.
 
 ## 32. O que não fazer
 
