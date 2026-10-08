@@ -321,7 +321,6 @@ ESTADO_PERMITIDO = {
 }
 
 
-@pytest.mark.xfail(strict=True, reason="sem trava antes do BACKEND-02A")
 @pytest.mark.parametrize("operacao", list(PERMITIDAS))
 def test_operacao_trava_a_linha_da_conferencia(
     client_autenticado, db, fabrica, conferente, auditor, monkeypatch,

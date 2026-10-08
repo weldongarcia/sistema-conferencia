@@ -15,6 +15,7 @@ from app.enums.conferencia_enums import (
 from app.services.conferencia_historico_service import registrar_historico
 from app.services.estado_conferencia import (
     Operacao,
+    buscar_conferencia_para_alteracao,
     exigir_operacao_permitida
 )
 from app.services.divergencia_service import (
@@ -276,11 +277,12 @@ def fechar_conferencia(
     usuario_id: int
 ):
 
-    conferencia = db.query(
-        Conferencia
-    ).filter_by(
-        id=conferencia_id
-    ).first()
+    # Trava a linha da conferência (SELECT ... FOR UPDATE)
+    # antes de validar o estado.
+    conferencia = buscar_conferencia_para_alteracao(
+        db,
+        conferencia_id
+    )
 
     if not conferencia:
 
@@ -370,11 +372,12 @@ def reabrir_conferencia(
     motivo: str
 ):
 
-    conferencia = db.query(
-        Conferencia
-    ).filter_by(
-        id=conferencia_id
-    ).first()
+    # Trava a linha da conferência (SELECT ... FOR UPDATE)
+    # antes de validar o estado.
+    conferencia = buscar_conferencia_para_alteracao(
+        db,
+        conferencia_id
+    )
 
     if not conferencia:
 
@@ -486,11 +489,12 @@ def aprovar_conferencia(
     usuario_id: int
 ):
 
-    conferencia = db.query(
-        Conferencia
-    ).filter_by(
-        id=conferencia_id
-    ).first()
+    # Trava a linha da conferência (SELECT ... FOR UPDATE)
+    # antes de validar o estado.
+    conferencia = buscar_conferencia_para_alteracao(
+        db,
+        conferencia_id
+    )
 
     if not conferencia:
 
@@ -594,11 +598,12 @@ def reprovar_conferencia(
     motivo: str | None
 ):
 
-    conferencia = db.query(
-        Conferencia
-    ).filter_by(
-        id=conferencia_id
-    ).first()
+    # Trava a linha da conferência (SELECT ... FOR UPDATE)
+    # antes de validar o estado.
+    conferencia = buscar_conferencia_para_alteracao(
+        db,
+        conferencia_id
+    )
 
     if not conferencia:
 

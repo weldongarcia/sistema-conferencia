@@ -5,11 +5,11 @@ from fastapi import HTTPException
 
 from app.models.nota_fiscal import NotaFiscal
 from app.models.item_nf import ItemNF
-from app.models.conferencia import Conferencia
 
 from app.services.divergencia_service import recalcular_divergencias
 from app.services.estado_conferencia import (
     Operacao,
+    buscar_conferencia_para_alteracao,
     exigir_operacao_permitida
 )
 from app.utils.codigo import normalizar_codigo
@@ -26,10 +26,11 @@ def importar_xml(db, file, conferencia_id):
     # BUSCAR CONFERÊNCIA
     # ==========================================================
 
-    conferencia = (
-        db.query(Conferencia)
-        .filter_by(id=conferencia_id)
-        .first()
+    # Trava a linha da conferência (SELECT ... FOR UPDATE)
+    # antes de validar o estado.
+    conferencia = buscar_conferencia_para_alteracao(
+        db,
+        conferencia_id
     )
 
     if not conferencia:

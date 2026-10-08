@@ -98,3 +98,33 @@ def test_mensagens_das_transicoes_do_auditor_preservadas(operacao, mensagem):
         )
 
     assert erro.value.detail == mensagem
+
+
+def test_busca_para_alteracao_usa_for_update_no_postgresql(db):
+    # O SQLite ignora a trava; a consulta é compilada para o
+    # dialeto do PostgreSQL para provar que FOR UPDATE é emitido.
+    from sqlalchemy.dialects import postgresql
+    from sqlalchemy.orm import Query
+
+    from app.services import estado_conferencia
+
+    capturadas = []
+    original = Query.first
+
+    def capturar(self):
+        capturadas.append(self)
+        return original(self)
+
+    Query.first = capturar
+
+    try:
+        estado_conferencia.buscar_conferencia_para_alteracao(db, 1)
+    finally:
+        Query.first = original
+
+    (consulta,) = capturadas
+
+    sql = str(consulta.statement.compile(dialect=postgresql.dialect()))
+
+    assert "FOR UPDATE" in sql
+    assert "FROM conferencias" in sql

@@ -21,8 +21,10 @@ não permitem nenhuma operação.
 from enum import Enum
 
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
 
 from app.enums.conferencia_enums import StatusConferencia
+from app.models.conferencia import Conferencia
 
 
 class Operacao(str, Enum):
@@ -121,4 +123,29 @@ def exigir_operacao_permitida(conferencia, operacao: Operacao) -> None:
         detail=MENSAGENS[operacao].format(
             status=_valor(conferencia.status)
         ),
+    )
+
+
+# ==========================================================
+# TRAVA DA CONFERÊNCIA
+#
+# Toda operação que altera a conferência (ou seus dados) deve
+# obtê-la por aqui, antes de validar o estado. No PostgreSQL a
+# linha fica travada (SELECT ... FOR UPDATE) até o commit ou
+# rollback, serializando operações concorrentes sobre a mesma
+# conferência. populate_existing garante que o estado validado é
+# o lido depois da trava, mesmo que a sessão já tenha carregado a
+# conferência antes. O SQLite ignora a trava.
+# ==========================================================
+
+def buscar_conferencia_para_alteracao(
+    db: Session,
+    conferencia_id: int
+):
+    return (
+        db.query(Conferencia)
+        .filter(Conferencia.id == conferencia_id)
+        .populate_existing()
+        .with_for_update()
+        .first()
     )

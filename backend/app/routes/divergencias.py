@@ -13,6 +13,7 @@ from app.core.security import exigir_perfil
 
 from app.services.estado_conferencia import (
     Operacao,
+    buscar_conferencia_para_alteracao,
     exigir_operacao_permitida
 )
 
@@ -132,19 +133,34 @@ def justificar_divergencia(
     # BUSCAR CONFERÊNCIA
     # ========================================================
 
-    conferencia = (
-        db.query(Conferencia)
-        .filter(
-            Conferencia.id
-            == divergencia.conferencia_id
-        )
-        .first()
+    # Trava a linha da conferência (SELECT ... FOR UPDATE)
+    # antes de validar o estado.
+    conferencia = buscar_conferencia_para_alteracao(
+        db,
+        divergencia.conferencia_id
     )
 
     if not conferencia:
         raise HTTPException(
             status_code=404,
             detail="Conferência não encontrada."
+        )
+
+    # Relê a divergência depois da trava: um recálculo
+    # concorrente pode tê-la alterado ou removido.
+    divergencia = (
+        db.query(Divergencia)
+        .filter(
+            Divergencia.id == divergencia_id
+        )
+        .populate_existing()
+        .first()
+    )
+
+    if not divergencia:
+        raise HTTPException(
+            status_code=404,
+            detail="Divergência não encontrada."
         )
 
     # ========================================================
