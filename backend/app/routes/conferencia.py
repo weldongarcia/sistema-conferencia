@@ -7,7 +7,8 @@ from app.services.conferencia_service import (
     comparar_conferencia,
     fechar_conferencia,
     reabrir_conferencia,
-    aprovar_conferencia as aprovar_conferencia_service
+    aprovar_conferencia as aprovar_conferencia_service,
+    reprovar_conferencia as reprovar_conferencia_service
 )
 
 from app.core.perfis import AUDITOR
@@ -18,15 +19,6 @@ from app.models.conferencia_historico import ConferenciaHistorico
 from app.models.contagem_historico import ContagemHistorico
 
 from app.utils.auth import get_current_user
-from app.enums.conferencia_enums import StatusConferencia
-from app.services.estado_conferencia import (
-    Operacao,
-    exigir_operacao_permitida
-)
-
-from app.services.conferencia_historico_service import (
-    registrar_historico
-)
 
 
 router = APIRouter(
@@ -250,52 +242,21 @@ def reprovar_conferencia(
 ):
     # --------------------------------------------------------
     # MOTIVO
-    # Opcional na API para manter compatibilidade com
-    # clientes que não enviam corpo. O painel exige o motivo.
+    # Body(None): ausência de corpo chega ao service, que
+    # responde 400 (motivo obrigatório) em vez de 422.
     # --------------------------------------------------------
-
-    motivo = motivo.strip() if motivo and motivo.strip() else None
 
     exigir_perfil(
         usuario,
         [AUDITOR]
     )
 
-    conferencia = (
-        db.query(Conferencia)
-        .filter(
-            Conferencia.id == conferencia_id
-        )
-        .first()
-    )
-
-    if not conferencia:
-        raise HTTPException(
-            status_code=404,
-            detail="Conferência não encontrada."
-        )
-
-    exigir_operacao_permitida(
-        conferencia,
-        Operacao.REPROVAR
-    )
-
-    conferencia.status = StatusConferencia.REPROVADA
-
-    registrar_historico(
+    return reprovar_conferencia_service(
         db=db,
         conferencia_id=conferencia_id,
         usuario_id=usuario.id,
-        acao="REPROVADA",
-        versao=conferencia.versao,
         motivo=motivo
     )
-
-    db.commit()
-
-    return {
-        "msg": "Conferência reprovada"
-    }
 
 
 # ============================================================

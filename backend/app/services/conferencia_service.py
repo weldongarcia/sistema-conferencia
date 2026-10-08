@@ -580,3 +580,73 @@ def aprovar_conferencia(
         "status": conferencia.status.value,
         "versao": conferencia.versao
     }
+
+
+# ==========================================================
+# REPROVAR CONFERÊNCIA
+# ==========================================================
+
+def reprovar_conferencia(
+    db: Session,
+    conferencia_id: int,
+    usuario_id: int,
+    motivo: str | None
+):
+
+    conferencia = db.query(
+        Conferencia
+    ).filter_by(
+        id=conferencia_id
+    ).first()
+
+    if not conferencia:
+
+        raise HTTPException(
+            404,
+            "Conferência não encontrada"
+        )
+
+    # ======================================================
+    # MOTIVO OBRIGATÓRIO
+    # ======================================================
+
+    motivo = motivo.strip() if isinstance(motivo, str) else ""
+
+    if not motivo:
+
+        raise HTTPException(
+            400,
+            "O motivo da reprovação é obrigatório."
+        )
+
+    # ======================================================
+    # STATUS OBRIGATÓRIO
+    # ======================================================
+
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.REPROVAR
+    )
+
+    # ======================================================
+    # REPROVAR
+    # ======================================================
+
+    conferencia.status = (
+        StatusConferencia.REPROVADA
+    )
+
+    registrar_historico(
+        db=db,
+        conferencia_id=conferencia.id,
+        usuario_id=usuario_id,
+        acao="REPROVADA",
+        versao=conferencia.versao,
+        motivo=motivo
+    )
+
+    db.commit()
+
+    return {
+        "msg": "Conferência reprovada"
+    }

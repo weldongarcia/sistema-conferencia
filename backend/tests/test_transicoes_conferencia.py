@@ -161,7 +161,6 @@ def reprovar(client, conferencia, auditor, **kwargs):
     )
 
 
-@pytest.mark.xfail(strict=True, reason="motivo era opcional")
 @pytest.mark.parametrize(
     "corpo",
     [{}, {"json": ""}, {"json": "   "}, {"json": None}],
@@ -237,6 +236,7 @@ def _conferencia_para(transicao, fabrica, db):
     estado = {
         "fechar": S.RASCUNHO,
         "aprovar": S.FINALIZADA,
+        "reprovar": S.FINALIZADA,
         "reabrir": S.FINALIZADA,
     }[transicao]
 
@@ -255,6 +255,12 @@ def _chamar_service(transicao, db, conferencia, usuario):
             db=db, conferencia_id=conferencia.id, usuario_id=usuario.id
         )
 
+    if transicao == "reprovar":
+        return conferencia_service.reprovar_conferencia(
+            db=db, conferencia_id=conferencia.id, usuario_id=usuario.id,
+            motivo="Teste de atomicidade",
+        )
+
     if transicao == "reabrir":
         return conferencia_service.reabrir_conferencia(
             db=db, conferencia_id=conferencia.id, usuario_id=usuario.id,
@@ -265,7 +271,9 @@ def _chamar_service(transicao, db, conferencia, usuario):
 
 
 @pytest.mark.xfail(strict=True, reason="histórico era confirmado à parte")
-@pytest.mark.parametrize("transicao", ["fechar", "aprovar", "reabrir"])
+@pytest.mark.parametrize(
+    "transicao", ["fechar", "aprovar", "reprovar", "reabrir"]
+)
 def test_falha_depois_do_historico_desfaz_toda_a_transicao(
     db, fabrica, monkeypatch, transicao
 ):
