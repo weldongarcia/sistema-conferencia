@@ -19,6 +19,10 @@ from app.models.contagem_historico import ContagemHistorico
 
 from app.utils.auth import get_current_user
 from app.enums.conferencia_enums import StatusConferencia
+from app.services.estado_conferencia import (
+    Operacao,
+    exigir_operacao_permitida
+)
 
 from app.services.conferencia_historico_service import (
     registrar_historico
@@ -271,14 +275,10 @@ def reprovar_conferencia(
             detail="Conferência não encontrada."
         )
 
-    if conferencia.status != StatusConferencia.FINALIZADA:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Somente conferências finalizadas "
-                "podem ser reprovadas."
-            )
-        )
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.REPROVAR
+    )
 
     conferencia.status = StatusConferencia.REPROVADA
 

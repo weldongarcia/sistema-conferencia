@@ -7,8 +7,11 @@ from app.models.nota_fiscal import NotaFiscal
 from app.models.item_nf import ItemNF
 from app.models.conferencia import Conferencia
 
-from app.enums.conferencia_enums import StatusConferencia
 from app.services.divergencia_service import recalcular_divergencias
+from app.services.estado_conferencia import (
+    Operacao,
+    exigir_operacao_permitida
+)
 from app.utils.codigo import normalizar_codigo
 
 
@@ -39,19 +42,10 @@ def importar_xml(db, file, conferencia_id):
     # VALIDAR STATUS
     # ==========================================================
 
-    status_permitidos = {
-        StatusConferencia.RASCUNHO,
-        StatusConferencia.REABERTA,
-    }
-
-    if conferencia.status not in status_permitidos:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Não é possível importar XML para uma "
-                f"conferência com status {conferencia.status}."
-            )
-        )
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.IMPORTAR_XML
+    )
 
     # ==========================================================
     # VERIFICAR SE JÁ EXISTE NOTA NA CONFERÊNCIA

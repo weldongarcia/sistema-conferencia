@@ -17,6 +17,10 @@ from app.core.status import (
 )
 
 from app.services.conferencia_historico_service import registrar_historico
+from app.services.estado_conferencia import (
+    Operacao,
+    exigir_operacao_permitida
+)
 from app.services.divergencia_service import (
     calcular_comparacao,
     divergencia_corresponde,
@@ -390,18 +394,10 @@ def reabrir_conferencia(
     # STATUS QUE PERMITEM REABERTURA
     # ======================================================
 
-    if conferencia.status not in [
-        StatusConferencia.FINALIZADA,
-        StatusConferencia.REPROVADA
-    ]:
-
-        raise HTTPException(
-            400,
-            (
-                "Somente conferências finalizadas "
-                "ou reprovadas podem ser reabertas."
-            )
-        )
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.REABRIR
+    )
 
     # ======================================================
     # NOVA VERSÃO
@@ -503,12 +499,10 @@ def aprovar_conferencia(
     # STATUS OBRIGATÓRIO
     # ==========================================
 
-    if conferencia.status != StatusConferencia.FINALIZADA:
-
-        raise HTTPException(
-            400,
-            "Somente conferências finalizadas podem ser aprovadas."
-        )
+    exigir_operacao_permitida(
+        conferencia,
+        Operacao.APROVAR
+    )
 
     # ==========================================
     # DIVERGÊNCIAS DA VERSÃO ATUAL
