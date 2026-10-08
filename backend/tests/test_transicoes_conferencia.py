@@ -2,9 +2,6 @@
 Transições da conferência (BACKEND-02A): aprovação com recálculo,
 reprovação com motivo obrigatório, atomicidade do histórico e trava
 da linha da conferência.
-
-Testes marcados como xfail(strict=True) registram o comportamento
-anterior às correções e são liberados à medida que elas entram.
 """
 
 import pytest
@@ -352,7 +349,6 @@ def test_operacao_trava_a_linha_da_conferencia(
 # TEXTO DO HISTÓRICO DA JUSTIFICATIVA
 # ============================================================
 
-@pytest.mark.xfail(strict=True, reason="gravava TipoJustificativa.X")
 def test_historico_da_justificativa_grava_valor_do_tipo(
     client_autenticado, db, fabrica, conferente, auditor
 ):

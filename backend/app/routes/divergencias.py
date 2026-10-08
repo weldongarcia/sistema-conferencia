@@ -246,7 +246,7 @@ def justificar_divergencia(
         versao=conferencia.versao,
         motivo=(
             f"Produto {divergencia.codigo} | "
-            f"Tipo: {dados.justificativa_tipo} | "
+            f"Tipo: {dados.justificativa_tipo.value} | "
             f"{dados.justificativa_descricao.strip()}"
         )
     )
